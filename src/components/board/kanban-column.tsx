@@ -64,13 +64,13 @@ export function KanbanColumn({
   const cardIds = column.cards.map((c) => c.id);
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-lg bg-muted/50">
+    <div className="group/col flex w-[280px] shrink-0 flex-col">
       {/* Column Header */}
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between px-2 py-2">
+        <div className="flex min-w-0 items-center gap-2">
           {column.color && (
             <div
-              className="h-3 w-3 rounded-full shrink-0"
+              className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: column.color }}
             />
           )}
@@ -86,42 +86,57 @@ export function KanbanColumn({
                   setIsEditing(false);
                 }
               }}
-              className="h-6 text-sm font-semibold"
+              className="h-6 border-0 bg-transparent px-0 text-[13px] font-semibold shadow-none focus-visible:ring-0"
               autoFocus
             />
           ) : (
-            <h3 className="text-sm font-semibold truncate">{column.name}</h3>
+            <h3
+              onClick={() => setIsEditing(true)}
+              className="cursor-text truncate text-[13px] font-semibold uppercase tracking-wide text-foreground"
+            >
+              {column.name}
+            </h3>
           )}
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className="shrink-0 text-[12px] font-medium text-muted-foreground">
             {column.cards.length}
           </span>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md h-6 w-6 hover:bg-accent hover:text-accent-foreground">
-            <MoreHorizontal className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => onDeleteColumn(column.id)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center opacity-0 transition-opacity group-hover/col:opacity-100">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label="Add card"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => onDeleteColumn(column.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Cards */}
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 space-y-2 overflow-y-auto p-2 min-h-[60px]",
-          isOver && "bg-accent/50 rounded-md"
+          "flex-1 space-y-2 rounded-md px-1 py-1 min-h-[60px] transition-colors",
+          isOver && "bg-accent/50"
         )}
       >
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
@@ -136,9 +151,9 @@ export function KanbanColumn({
       </div>
 
       {/* Add Card */}
-      <div className="p-2">
+      <div className="px-1 pt-1 pb-2">
         {isAdding ? (
-          <div className="space-y-2">
+          <div className="space-y-2 rounded-md border border-border bg-card p-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <Input
               placeholder="Card title..."
               value={newCardTitle}
@@ -169,15 +184,14 @@ export function KanbanColumn({
             </div>
           </div>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground"
+          <button
+            type="button"
             onClick={() => setIsAdding(true)}
+            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add a card
-          </Button>
+            <Plus className="h-3.5 w-3.5" />
+            New
+          </button>
         )}
       </div>
     </div>

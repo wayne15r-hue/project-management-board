@@ -8,12 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, LayoutDashboard, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Board } from "@/types";
 import { formatDistanceToNow } from "date-fns";
@@ -30,6 +24,22 @@ import { formatDistanceToNow } from "date-fns";
 interface BoardListProps {
   boards: Board[];
   userId: string;
+}
+
+const BOARD_COLORS = [
+  "#E8A87C",
+  "#7CAFC4",
+  "#9B8FBF",
+  "#8BAE68",
+  "#D4846A",
+  "#C4A464",
+  "#6B9EAE",
+];
+
+function getBoardColor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return BOARD_COLORS[Math.abs(hash) % BOARD_COLORS.length];
 }
 
 export function BoardList({ boards, userId }: BoardListProps) {
@@ -46,7 +56,6 @@ export function BoardList({ boards, userId }: BoardListProps) {
     setLoading(true);
 
     try {
-      // Create board
       const { data: board, error: boardError } = await supabase
         .from("boards")
         .insert({ name: name.trim(), description: description.trim() || null, owner_id: userId })
@@ -55,11 +64,10 @@ export function BoardList({ boards, userId }: BoardListProps) {
 
       if (boardError) throw boardError;
 
-      // Create default columns
       const defaultColumns = [
-        { board_id: board.id, name: "To Do", position: 0, color: "#6366f1" },
-        { board_id: board.id, name: "In Progress", position: 1, color: "#f59e0b" },
-        { board_id: board.id, name: "Done", position: 2, color: "#22c55e" },
+        { board_id: board.id, name: "To Do", position: 0, color: "#9B8FBF" },
+        { board_id: board.id, name: "In Progress", position: 1, color: "#E8A87C" },
+        { board_id: board.id, name: "Done", position: 2, color: "#8BAE68" },
       ];
 
       const { error: colError } = await supabase
@@ -83,12 +91,63 @@ export function BoardList({ boards, userId }: BoardListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {boards.map((board) => {
+        const color = getBoardColor(board.id);
+        return (
+          <button
+            key={board.id}
+            type="button"
+            onClick={() => router.push(`/dashboard/board/${board.id}`)}
+            className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-border hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+          >
+            <div
+              className="h-1 w-full"
+              style={{ backgroundColor: color }}
+            />
+            <div className="flex flex-1 flex-col gap-3 p-5">
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
+                  style={{ backgroundColor: color }}
+                >
+                  {board.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-[15px] font-semibold text-foreground">
+                    {board.name}
+                  </h3>
+                  <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
+                    {board.description || "No description"}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-auto flex items-center justify-between pt-2 text-[12px] text-muted-foreground">
+                <span>
+                  Updated{" "}
+                  {formatDistanceToNow(new Date(board.created_at), {
+                    addSuffix: true,
+                  })}
+                </span>
+                <div className="flex -space-x-1.5">
+                  <div
+                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-card text-[9px] font-semibold text-white"
+                    style={{ backgroundColor: color }}
+                  >
+                    1
+                  </div>
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger className="flex h-[140px] items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 transition-colors hover:border-muted-foreground/50 hover:bg-muted cursor-pointer">
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <Plus className="h-8 w-8" />
-            <span className="text-sm font-medium">Create new board</span>
+        <DialogTrigger className="flex min-h-[148px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-transparent text-muted-foreground transition hover:border-muted-foreground/50 hover:bg-muted/40 hover:text-foreground">
+          <div className="flex flex-col items-center gap-1.5">
+            <Plus className="h-5 w-5" />
+            <span className="text-[13px] font-medium">New board</span>
           </div>
         </DialogTrigger>
         <DialogContent>
@@ -130,35 +189,6 @@ export function BoardList({ boards, userId }: BoardListProps) {
           </form>
         </DialogContent>
       </Dialog>
-
-      {boards.map((board) => (
-        <Card
-          key={board.id}
-          className="cursor-pointer transition-shadow hover:shadow-md"
-          onClick={() => router.push(`/dashboard/board/${board.id}`)}
-        >
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                <LayoutDashboard className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <CardTitle className="text-base truncate">
-                  {board.name}
-                </CardTitle>
-                <CardDescription className="line-clamp-2 text-xs mt-1">
-                  {board.description || "No description"}
-                </CardDescription>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {formatDistanceToNow(new Date(board.created_at), {
-                    addSuffix: true,
-                  })}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      ))}
     </div>
   );
 }

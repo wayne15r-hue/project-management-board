@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -10,7 +9,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Kanban, Table2, GanttChart, MoreHorizontal, Pencil, Trash2, Settings } from "lucide-react";
+import {
+  Kanban,
+  Table2,
+  GanttChart,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Settings,
+  Filter,
+  ArrowUpDown,
+  Share2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Board } from "@/types";
@@ -63,65 +73,109 @@ export function BoardHeader({ board, activeView, onViewChange }: BoardHeaderProp
   }
 
   return (
-    <div className="flex items-center justify-between border-b px-6 h-14">
-      <div className="flex items-center gap-4">
-        {isEditing ? (
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={handleRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleRename();
-              if (e.key === "Escape") {
-                setName(board.name);
-                setIsEditing(false);
-              }
-            }}
-            className="h-8 text-lg font-bold w-64"
-            autoFocus
-          />
-        ) : (
-          <h1 className="text-lg font-bold">{board.name}</h1>
-        )}
+    <div className="flex flex-col gap-3 border-b border-border bg-background px-8 pt-6 pb-0">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          {isEditing ? (
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename();
+                if (e.key === "Escape") {
+                  setName(board.name);
+                  setIsEditing(false);
+                }
+              }}
+              className="h-auto border-0 bg-transparent p-0 text-[24px] font-bold leading-tight shadow-none focus-visible:ring-0"
+              autoFocus
+            />
+          ) : (
+            <h1
+              onClick={() => setIsEditing(true)}
+              className="cursor-text text-[24px] font-bold leading-tight text-foreground underline-offset-4 hover:underline decoration-border decoration-2"
+            >
+              {board.name}
+            </h1>
+          )}
+          {board.description && (
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {board.description}
+            </p>
+          )}
+        </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 hover:bg-accent hover:text-accent-foreground">
-            <MoreHorizontal className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Board
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Board
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
-      {/* View Switcher */}
-      <div className="flex items-center rounded-lg border bg-muted p-1">
-        {views.map((view) => (
+      {/* Tabs + controls row */}
+      <div className="flex items-center justify-between -mb-px">
+        <div className="flex items-center gap-0.5">
+          {views.map((view) => (
+            <button
+              key={view.id}
+              onClick={() => onViewChange(view.id)}
+              className={cn(
+                "relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors",
+                activeView === view.id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <view.icon className="h-3.5 w-3.5" />
+              {view.label}
+              {activeView === view.id && (
+                <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 pb-2">
           <button
-            key={view.id}
-            onClick={() => onViewChange(view.id)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              activeView === view.id
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            type="button"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            <view.icon className="h-4 w-4" />
-            {view.label}
+            <Filter className="h-3.5 w-3.5" />
+            Filter
           </button>
-        ))}
+          <button
+            type="button"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            Sort
+          </button>
+        </div>
       </div>
     </div>
   );
