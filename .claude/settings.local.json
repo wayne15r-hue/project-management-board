@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"d:\\\\Projects\\\\Project Management Board\")",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(where npx:*)",
+      "Bash(cmd.exe /c \"where node && where npm && where npx\")",
+      "Bash(\"C:/Program Files/nodejs/npx.cmd\" --version)",
+      "Bash(\"C:/Program Files/nodejs/npx.cmd\" create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(npm exec:*)",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias @/* --use-npm --no-turbopack', {stdio: 'inherit', env: {...process.env, PATH: process.env.PATH}}\\)\")",
+      "Read(//d/Projects/**)",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx create-next-app@latest project-management-board --typescript --tailwind --eslint --app --src-dir --import-alias @/* --use-npm --no-turbopack', {stdio: 'inherit'}\\)\")",
+      "Bash(node -e ':*)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npm install @supabase/supabase-js @supabase/ssr @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities @tanstack/react-query zustand zod date-fns lucide-react resend @tanstack/react-table', {stdio: 'inherit', cwd: 'd:/Projects/Project Management Board'}\\)\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx shadcn@latest init -d --style new-york --base-color zinc', {stdio: 'inherit', cwd: 'd:/Projects/Project Management Board'}\\)\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx shadcn@latest init -d', {stdio: 'inherit', cwd: 'd:/Projects/Project Management Board'}\\)\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx shadcn@latest add dialog input textarea select popover badge avatar dropdown-menu separator card sonner label tooltip scroll-area sheet table calendar checkbox -y', {stdio: 'inherit', cwd: 'd:/Projects/Project Management Board'}\\)\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); execSync\\('npx tsc --noEmit 2>&1', {stdio: 'inherit', cwd: 'd:/Projects/Project Management Board'}\\)\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); try { execSync\\('npx tsc --noEmit 2>&1', {stdio: 'pipe', cwd: 'd:/Projects/Project Management Board'}\\); console.log\\('No errors'\\); } catch\\(e\\) { console.log\\(e.stdout?.toString\\(\\) || e.stderr?.toString\\(\\) || e.message\\); }\")",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); try { execSync\\('npx next build 2>&1', {stdio: 'pipe', cwd: 'd:/Projects/Project Management Board', timeout: 120000}\\); console.log\\('BUILD SUCCESS'\\); } catch\\(e\\) { const output = e.stdout?.toString\\(\\) || ''; const lines = output.split\\('\\\\n'\\); const errorLines = lines.filter\\(l => l.includes\\('Error'\\) || l.includes\\('error'\\) || l.includes\\('Failed'\\) || l.includes\\('failed'\\)\\); if \\(errorLines.length > 0\\) console.log\\(errorLines.join\\('\\\\n'\\)\\); else console.log\\(lines.slice\\(-30\\).join\\('\\\\n'\\)\\); }\")"
+    ]
+  }
+}
