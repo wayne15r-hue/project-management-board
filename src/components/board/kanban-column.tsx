@@ -20,16 +20,22 @@ import type { Card, Column } from "@/types";
 
 interface KanbanColumnProps {
   column: Column & { cards: Card[] };
+  allColumns: Column[];
   onAddCard: (columnId: string, title: string) => void;
   onCardClick: (card: Card) => void;
+  onUpdateCard: (cardId: string, data: Partial<Card>) => void;
+  onDeleteCard: (cardId: string) => void;
   onRenameColumn: (columnId: string, name: string) => void;
   onDeleteColumn: (columnId: string) => void;
 }
 
 export function KanbanColumn({
   column,
+  allColumns,
   onAddCard,
   onCardClick,
+  onUpdateCard,
+  onDeleteCard,
   onRenameColumn,
   onDeleteColumn,
 }: KanbanColumnProps) {
@@ -149,7 +155,10 @@ export function KanbanColumn({
             <KanbanCard
               key={card.id}
               card={card}
+              columns={allColumns}
               onClick={() => onCardClick(card)}
+              onUpdate={onUpdateCard}
+              onDelete={onDeleteCard}
             />
           ))}
         </SortableContext>

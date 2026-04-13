@@ -218,7 +218,6 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
             : col.cards.filter((c) => c.id !== cardId),
         }))
       );
-      toast.success("Card updated");
     } catch {
       toast.error("Failed to update card");
     }
@@ -291,11 +290,14 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
               <KanbanColumn
                 key={column.id}
                 column={column}
+                allColumns={columns}
                 onAddCard={handleAddCard}
                 onCardClick={(card) => {
                   setSelectedCard(card);
                   setDialogOpen(true);
                 }}
+                onUpdateCard={handleUpdateCard}
+                onDeleteCard={handleDeleteCard}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleDeleteColumn}
               />
@@ -321,6 +323,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
 
       <CardDetailDialog
         card={selectedCard}
+        board={board}
         columns={columns}
         members={members}
         open={dialogOpen}
