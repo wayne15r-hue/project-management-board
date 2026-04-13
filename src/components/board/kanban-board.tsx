@@ -285,26 +285,30 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto p-6 h-[calc(100vh-8rem)]">
-          {columns.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              onAddCard={handleAddCard}
-              onCardClick={(card) => {
-                setSelectedCard(card);
-                setDialogOpen(true);
-              }}
-              onRenameColumn={handleRenameColumn}
-              onDeleteColumn={handleDeleteColumn}
-            />
-          ))}
+        <div className="relative min-h-0 flex-1">
+          <div className="flex h-full gap-3 overflow-x-auto px-6 py-5">
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                onAddCard={handleAddCard}
+                onCardClick={(card) => {
+                  setSelectedCard(card);
+                  setDialogOpen(true);
+                }}
+                onRenameColumn={handleRenameColumn}
+                onDeleteColumn={handleDeleteColumn}
+              />
+            ))}
 
-          {/* Add Column Button */}
-          <AddColumnButton boardId={board.id} onRefresh={onRefresh} />
+            {/* Add Column Button */}
+            <AddColumnButton boardId={board.id} onRefresh={onRefresh} />
+          </div>
+          {/* Right edge fade-out */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent" />
         </div>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
           {activeCard && (
             <KanbanCard
               card={activeCard}
@@ -357,12 +361,12 @@ function AddColumnButton({
 
   if (isAdding) {
     return (
-      <div className="w-72 shrink-0 space-y-2 rounded-lg bg-muted/50 p-3">
+      <div className="h-full w-[300px] shrink-0 space-y-2 rounded-lg border border-[rgba(0,0,0,0.04)] bg-[rgba(0,0,0,0.02)] p-3">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Column name..."
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-foreground/20"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter") handleAdd();
@@ -394,7 +398,7 @@ function AddColumnButton({
   return (
     <button
       onClick={() => setIsAdding(true)}
-      className="flex h-10 w-72 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:bg-muted/50"
+      className="flex h-10 w-[300px] shrink-0 items-center justify-center gap-1.5 rounded-lg border border-dashed border-[rgba(0,0,0,0.08)] text-[13px] text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-black/[0.02] hover:text-foreground"
     >
       + Add Column
     </button>

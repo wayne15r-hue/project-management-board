@@ -9,9 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,6 +25,11 @@ import {
   Calendar as CalendarIcon,
   Loader2,
   Trash2,
+  User,
+  Flag,
+  CircleDot,
+  CalendarDays,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardCustomFields } from "@/components/custom-fields/card-custom-fields";
@@ -108,197 +111,199 @@ export function CardDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent
+        className="fixed left-auto right-0 top-0 bottom-0 grid h-screen w-full max-w-[680px] translate-x-0 translate-y-0 grid-rows-[auto_1fr] gap-0 overflow-hidden rounded-none rounded-l-xl border-l border-border bg-background p-0 ring-0 sm:max-w-[680px] data-open:slide-in-from-right data-closed:slide-out-to-right"
+      >
+        <DialogHeader className="border-b border-border px-8 pt-8 pb-4">
           <DialogTitle className="sr-only">Card Details</DialogTitle>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full border-0 bg-transparent p-0 text-[24px] font-bold leading-tight text-foreground outline-none placeholder:text-muted-foreground/60"
+            placeholder="Untitled"
+          />
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Title */}
-          <div>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-lg font-semibold border-0 px-0 focus-visible:ring-0 shadow-none"
-              placeholder="Card title"
-            />
+        <div className="overflow-y-auto px-8 pb-8 pt-6">
+          {/* Properties panel */}
+          <div className="space-y-1">
+            <PropertyRow icon={<CircleDot className="h-4 w-4" />} label="Status">
+              <Select value={columnId} onValueChange={(v) => v && setColumnId(v)}>
+                <SelectTrigger className="h-8 border-0 bg-transparent shadow-none hover:bg-accent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {columns.map((col) => (
+                    <SelectItem key={col.id} value={col.id}>
+                      {col.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </PropertyRow>
+
+            <PropertyRow icon={<Flag className="h-4 w-4" />} label="Priority">
+              <Select
+                value={priority}
+                onValueChange={(v) => v && setPriority(v as Priority)}
+              >
+                <SelectTrigger className="h-8 border-0 bg-transparent shadow-none hover:bg-accent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <PriorityBadge priority="low" />
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <PriorityBadge priority="medium" />
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <PriorityBadge priority="high" />
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </PropertyRow>
+
+            <PropertyRow icon={<User className="h-4 w-4" />} label="Assignee">
+              <Select
+                value={assigneeId}
+                onValueChange={(v) => setAssigneeId(v ?? "")}
+              >
+                <SelectTrigger className="h-8 border-0 bg-transparent shadow-none hover:bg-accent">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.full_name || member.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </PropertyRow>
+
+            <PropertyRow icon={<CalendarDays className="h-4 w-4" />} label="Start date">
+              <Popover>
+                <PopoverTrigger
+                  className={cn(
+                    "inline-flex h-8 w-full items-center justify-start rounded-md px-2 text-[13px] hover:bg-accent",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                  {startDate ? format(startDate, "PPP") : "Empty"}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                  />
+                </PopoverContent>
+              </Popover>
+            </PropertyRow>
+
+            <PropertyRow icon={<CalendarClock className="h-4 w-4" />} label="Due date">
+              <Popover>
+                <PopoverTrigger
+                  className={cn(
+                    "inline-flex h-8 w-full items-center justify-start rounded-md px-2 text-[13px] hover:bg-accent",
+                    !dueDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                  {dueDate ? format(dueDate, "PPP") : "Empty"}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                  />
+                </PopoverContent>
+              </Popover>
+            </PropertyRow>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left: Description */}
-            <div className="md:col-span-2 space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Description
-                </Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add a description..."
-                  rows={6}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            {/* Right: Metadata */}
-            <div className="space-y-4">
-              {/* Status */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Status
-                </Label>
-                <Select value={columnId} onValueChange={(v) => v && setColumnId(v)}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {columns.map((col) => (
-                      <SelectItem key={col.id} value={col.id}>
-                        {col.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Priority */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Priority
-                </Label>
-                <Select
-                  value={priority}
-                  onValueChange={(v) => setPriority(v as Priority)}
-                >
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">
-                      <PriorityBadge priority="low" />
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <PriorityBadge priority="medium" />
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <PriorityBadge priority="high" />
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Assignee */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Assignee
-                </Label>
-                <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? "")}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
-                    {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Start Date */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Start Date
-                </Label>
-                <Popover>
-                  <PopoverTrigger
-                    className={cn(
-                      "inline-flex items-center w-full justify-start rounded-md border border-input bg-background px-3 py-2 text-sm font-normal mt-1.5 hover:bg-accent hover:text-accent-foreground",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Pick a date"}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Due Date */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Due Date
-                </Label>
-                <Popover>
-                  <PopoverTrigger
-                    className={cn(
-                      "inline-flex items-center w-full justify-start rounded-md border border-input bg-background px-3 py-2 text-sm font-normal mt-1.5 hover:bg-accent hover:text-accent-foreground",
-                      !dueDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "PPP") : "Pick a date"}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
+          {/* Description */}
+          <div className="mt-8">
+            <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Description
+            </h3>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a description..."
+              rows={6}
+              className="resize-none border-border bg-transparent text-[14px] leading-relaxed shadow-none focus-visible:ring-1"
+            />
           </div>
 
           {/* Custom Fields */}
           {customFields.length > 0 && (
-            <>
-              <Separator />
+            <div className="mt-8">
+              <Separator className="mb-6" />
               <CardCustomFields
                 cardId={card!.id}
                 boardId={card!.board_id}
                 definitions={customFields}
               />
-            </>
+            </div>
           )}
 
-          {/* Activity Feed */}
-          <Separator />
-          <ActivityFeed cardId={card!.id} />
+          {/* Activity */}
+          <div className="mt-8">
+            <Separator className="mb-6" />
+            <ActivityFeed cardId={card!.id} />
+          </div>
 
-          <Separator />
-
-          <div className="flex justify-between">
+          <div className="mt-8 flex items-center justify-between border-t border-border pt-5">
             <Button
-              variant="destructive"
+              variant="ghost"
               size="sm"
               onClick={handleDelete}
               disabled={deleting}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               {deleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Delete Card
+              Delete
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-foreground text-background hover:bg-foreground/90"
+            >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              Save changes
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PropertyRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[160px_1fr] items-center gap-2 py-1">
+      <div className="flex items-center gap-2 px-2 text-[13px] text-muted-foreground">
+        <span className="text-muted-foreground">{icon}</span>
+        {label}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
   );
 }
