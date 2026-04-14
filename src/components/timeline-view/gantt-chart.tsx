@@ -24,9 +24,9 @@ interface GanttChartProps {
 type ZoomLevel = "day" | "week" | "month";
 
 const priorityColors: Record<Priority, string> = {
-  low: "bg-slate-400",
-  medium: "bg-blue-500",
-  high: "bg-red-500",
+  low: "bg-[#27AE60]",
+  medium: "bg-[#F2994A]",
+  high: "bg-[#EB5757]",
 };
 
 export function GanttChart({ board }: GanttChartProps) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -21,8 +21,10 @@ import { KanbanColumn } from "./kanban-column";
 import { KanbanCard } from "./kanban-card";
 import { CardDetailDialog } from "./card-detail-dialog";
 import { useBoardStore } from "@/stores/board-store";
+import { isViewActive } from "@/lib/board-filters";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { SearchX } from "lucide-react";
 import type { Card, Column, Profile, BoardWithDetails } from "@/types";
 
 interface KanbanBoardProps {
@@ -36,13 +38,16 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { setDragState } = useBoardStore();
+  const { setDragState, filters, sorts, search, clearFilters, clearSorts, setSearch } = useBoardStore();
   const supabase = createClient();
 
-  // Update columns when board prop changes
-  useState(() => {
+  // Sync local columns when board prop changes (filters, realtime, etc.)
+  useEffect(() => {
     setColumns(board.columns);
-  });
+  }, [board.columns]);
+
+  const viewActive = isViewActive(filters, sorts, search);
+  const totalVisibleCards = columns.reduce((n, c) => n + c.cards.length, 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -285,6 +290,32 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         onDragEnd={handleDragEnd}
       >
         <div className="relative min-h-0 flex-1">
+          {viewActive && totalVisibleCards === 0 && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+              <div className="pointer-events-auto flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-background/80 px-8 py-6 text-center backdrop-blur-sm">
+                <SearchX className="h-6 w-6 text-muted-foreground" />
+                <div>
+                  <p className="text-[14px] font-medium text-foreground">
+                    No cards match your filters
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    Try adjusting or clearing active filters.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    clearFilters();
+                    clearSorts();
+                    setSearch("");
+                  }}
+                >
+                  Clear all
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="flex h-full gap-3 overflow-x-auto px-6 py-5">
             {columns.map((column) => (
               <KanbanColumn

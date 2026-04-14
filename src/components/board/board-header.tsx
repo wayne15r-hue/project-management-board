@@ -17,16 +17,16 @@ import {
   Pencil,
   Trash2,
   Settings,
-  Filter,
-  ArrowUpDown,
   Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { Board } from "@/types";
+import { ViewControls } from "./view-controls";
+import type { BoardWithDetails, Profile } from "@/types";
 
 interface BoardHeaderProps {
-  board: Board;
+  board: BoardWithDetails;
+  members: Profile[];
   activeView: "kanban" | "table" | "timeline";
   onViewChange: (view: "kanban" | "table" | "timeline") => void;
 }
@@ -37,7 +37,7 @@ const views = [
   { id: "timeline" as const, label: "Timeline", icon: GanttChart },
 ];
 
-export function BoardHeader({ board, activeView, onViewChange }: BoardHeaderProps) {
+export function BoardHeader({ board, members, activeView, onViewChange }: BoardHeaderProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
@@ -160,22 +160,7 @@ export function BoardHeader({ board, activeView, onViewChange }: BoardHeaderProp
           ))}
         </div>
 
-        <div className="flex items-center gap-1 pb-2">
-          <button
-            type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Filter
-          </button>
-          <button
-            type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            Sort
-          </button>
-        </div>
+        <ViewControls board={board} members={members} />
       </div>
     </div>
   );

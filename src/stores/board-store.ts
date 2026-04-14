@@ -1,5 +1,30 @@
 import { create } from "zustand";
 
+export type FilterField = "status" | "priority" | "assignee" | "due_date";
+export type FilterOp =
+  | "is"
+  | "is_not"
+  | "is_empty"
+  | "is_not_empty"
+  | "before"
+  | "after";
+
+export interface ViewFilter {
+  id: string;
+  field: FilterField;
+  op: FilterOp;
+  value?: string | null;
+}
+
+export type SortField = "title" | "priority" | "due_date" | "created_at";
+export type SortDir = "asc" | "desc";
+
+export interface ViewSort {
+  id: string;
+  field: SortField;
+  dir: SortDir;
+}
+
 interface BoardUIStore {
   activeDragCardId: string | null;
   activeDragSourceColumnId: string | null;
@@ -8,20 +33,27 @@ interface BoardUIStore {
   activeView: "kanban" | "table" | "timeline";
   setActiveView: (view: BoardUIStore["activeView"]) => void;
 
-  filters: {
-    priority: string[];
-    assigneeId: string | null;
-    searchQuery: string;
-  };
-  setFilters: (filters: Partial<BoardUIStore["filters"]>) => void;
-  resetFilters: () => void;
-}
+  search: string;
+  setSearch: (q: string) => void;
 
-const defaultFilters = {
-  priority: [] as string[],
-  assigneeId: null as string | null,
-  searchQuery: "",
-};
+  filters: ViewFilter[];
+  addFilter: (filter: ViewFilter) => void;
+  updateFilter: (id: string, patch: Partial<ViewFilter>) => void;
+  removeFilter: (id: string) => void;
+  clearFilters: () => void;
+
+  sorts: ViewSort[];
+  addSort: (sort: ViewSort) => void;
+  updateSort: (id: string, patch: Partial<ViewSort>) => void;
+  removeSort: (id: string) => void;
+  clearSorts: () => void;
+
+  hydrate: (state: {
+    search?: string;
+    filters?: ViewFilter[];
+    sorts?: ViewSort[];
+  }) => void;
+}
 
 export const useBoardStore = create<BoardUIStore>((set) => ({
   activeDragCardId: null,
@@ -32,8 +64,34 @@ export const useBoardStore = create<BoardUIStore>((set) => ({
   activeView: "kanban",
   setActiveView: (view) => set({ activeView: view }),
 
-  filters: { ...defaultFilters },
-  setFilters: (filters) =>
-    set((state) => ({ filters: { ...state.filters, ...filters } })),
-  resetFilters: () => set({ filters: { ...defaultFilters } }),
+  search: "",
+  setSearch: (q) => set({ search: q }),
+
+  filters: [],
+  addFilter: (filter) =>
+    set((state) => ({ filters: [...state.filters, filter] })),
+  updateFilter: (id, patch) =>
+    set((state) => ({
+      filters: state.filters.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    })),
+  removeFilter: (id) =>
+    set((state) => ({ filters: state.filters.filter((f) => f.id !== id) })),
+  clearFilters: () => set({ filters: [] }),
+
+  sorts: [],
+  addSort: (sort) => set((state) => ({ sorts: [...state.sorts, sort] })),
+  updateSort: (id, patch) =>
+    set((state) => ({
+      sorts: state.sorts.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    })),
+  removeSort: (id) =>
+    set((state) => ({ sorts: state.sorts.filter((s) => s.id !== id) })),
+  clearSorts: () => set({ sorts: [] }),
+
+  hydrate: ({ search, filters, sorts }) =>
+    set((state) => ({
+      search: search ?? state.search,
+      filters: filters ?? state.filters,
+      sorts: sorts ?? state.sorts,
+    })),
 }));
