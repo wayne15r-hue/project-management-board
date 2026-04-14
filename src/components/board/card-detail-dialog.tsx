@@ -31,6 +31,10 @@ import {
 import { cn } from "@/lib/utils";
 import { CardCustomFields } from "@/components/custom-fields/card-custom-fields";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { Subtasks } from "./subtasks";
+import { Attachments } from "./attachments";
+import { LabelPicker } from "./label-picker";
+import { Tag } from "lucide-react";
 import type {
   Board,
   Card,
@@ -38,6 +42,7 @@ import type {
   Profile,
   Priority,
   CustomFieldDefinition,
+  Label,
 } from "@/types";
 
 interface CardDetailDialogProps {
@@ -80,6 +85,7 @@ export function CardDetailDialog({
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [assigneeId, setAssigneeId] = useState<string>("");
+  const [cardLabels, setCardLabels] = useState<Label[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -97,6 +103,11 @@ export function CardDetailDialog({
       setDueDate(card.due_date ? new Date(card.due_date) : undefined);
       setStartDate(card.start_date ? new Date(card.start_date) : undefined);
       setAssigneeId(card.assignee_id || "");
+      setCardLabels(
+        (card.card_labels || [])
+          .map((cl) => cl.label)
+          .filter((l): l is Label => !!l)
+      );
       setConfirmDelete(false);
       setSaveStatus("idle");
       lastCardId.current = card.id;
@@ -386,6 +397,15 @@ export function CardDetailDialog({
               </Popover>
             </PropertyRow>
 
+            <PropertyRow icon={<Tag className="h-3.5 w-3.5" />} label="Labels">
+              <LabelPicker
+                boardId={card.board_id}
+                cardId={card.id}
+                selectedLabels={cardLabels}
+                onChange={setCardLabels}
+              />
+            </PropertyRow>
+
             <PropertyRow icon={<CalendarDays className="h-3.5 w-3.5" />} label="Start date">
               <DatePickerButton value={startDate} onChange={changeStartDate} />
             </PropertyRow>
@@ -409,6 +429,16 @@ export function CardDetailDialog({
               placeholder="Add a description..."
             />
           </div>
+
+          <Separator className="my-7" />
+
+          {/* Subtasks */}
+          <Subtasks cardId={card.id} />
+
+          <Separator className="my-7" />
+
+          {/* Attachments */}
+          <Attachments cardId={card.id} />
 
           {/* Custom fields */}
           {customFields.length > 0 && (

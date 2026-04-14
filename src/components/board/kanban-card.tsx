@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, isPast, isToday } from "date-fns";
-import { Calendar, MoreHorizontal, Pencil, Trash2, Flag, ArrowRight, FileText } from "lucide-react";
+import { Calendar, MoreHorizontal, Pencil, Trash2, Flag, ArrowRight, FileText, CheckSquare, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -79,6 +79,14 @@ export function KanbanCard({
   const overdue = dueDate && isPast(dueDate) && !isToday(dueDate);
   const dueToday = dueDate && isToday(dueDate);
   const descPreview = card.description?.split("\n")[0];
+  const labels = (card.card_labels || [])
+    .map((cl) => cl.label)
+    .filter((l): l is NonNullable<typeof l> => !!l);
+  const visibleLabels = labels.slice(0, 3);
+  const extraLabels = labels.length - visibleLabels.length;
+  const subtaskCount = card.subtasks?.length ?? 0;
+  const subtaskDone = card.subtasks?.filter((s) => s.completed).length ?? 0;
+  const attachmentCount = card.attachments?.length ?? 0;
 
   function commitTitle() {
     const trimmed = editTitle.trim();
@@ -206,6 +214,25 @@ export function KanbanCard({
         </div>
       )}
 
+      {visibleLabels.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-1">
+          {visibleLabels.map((l) => (
+            <span
+              key={l.id}
+              className="inline-flex max-w-[120px] items-center truncate rounded px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{ backgroundColor: `${l.color}1A`, color: l.color }}
+            >
+              {l.name}
+            </span>
+          ))}
+          {extraLabels > 0 && (
+            <span className="text-[10px] font-medium text-muted-foreground">
+              +{extraLabels} more
+            </span>
+          )}
+        </div>
+      )}
+
       {isEditingTitle ? (
         <textarea
           value={editTitle}
@@ -238,9 +265,27 @@ export function KanbanCard({
       )}
 
       {/* Footer metadata */}
-      {(dueDate || card.assignee || card.description) && (
+      {(dueDate || card.assignee || card.description || subtaskCount > 0 || attachmentCount > 0) && (
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {subtaskCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                title={`${subtaskDone}/${subtaskCount} subtasks completed`}
+              >
+                <CheckSquare className="h-3 w-3" />
+                {subtaskDone}/{subtaskCount}
+              </span>
+            )}
+            {attachmentCount > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground"
+                title={`${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"}`}
+              >
+                <Paperclip className="h-3 w-3" />
+                {attachmentCount}
+              </span>
+            )}
             {dueDate && (
               <span
                 className={cn(

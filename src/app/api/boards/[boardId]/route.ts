@@ -18,7 +18,10 @@ export async function GET(
         *,
         cards (
           *,
-          assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email)
+          assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email),
+          subtasks (id, completed),
+          card_labels (label:labels (id, name, color)),
+          attachments (id)
         )
       )
     `

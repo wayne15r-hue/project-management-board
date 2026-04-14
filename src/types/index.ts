@@ -48,6 +48,37 @@ export interface Card {
   updated_at: string;
   assignee?: Profile | null;
   custom_field_values?: CustomFieldValue[];
+  subtasks?: Subtask[];
+  card_labels?: { label: Label }[];
+  attachments?: Attachment[];
+}
+
+export interface Subtask {
+  id: string;
+  card_id: string;
+  title: string;
+  completed: boolean;
+  position: number;
+  created_at: string;
+}
+
+export interface Label {
+  id: string;
+  board_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  card_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  storage_path: string;
+  uploaded_by: string;
+  created_at: string;
 }
 
 export interface CustomFieldDefinition {
