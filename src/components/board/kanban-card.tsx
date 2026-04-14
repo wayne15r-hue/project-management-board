@@ -107,7 +107,7 @@ export function KanbanCard({
       {...(isEditingTitle ? {} : attributes)}
       {...(isEditingTitle ? {} : listeners)}
       className={cn(
-        "group/card relative mx-1.5 my-1 cursor-pointer rounded-lg border border-[rgba(0,0,0,0.06)] bg-card px-[14px] py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]",
+        "group/card relative mx-1.5 my-1 cursor-pointer rounded-lg border border-border bg-card px-[14px] py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.4)]",
         isDragOverlay && "rotate-[2deg] opacity-90 shadow-[0_12px_32px_rgba(0,0,0,0.18)]"
       )}
       onClick={(e) => {
@@ -226,13 +226,13 @@ export function KanbanCard({
           className="w-full resize-none border-0 bg-transparent p-0 pr-10 text-[14px] font-medium leading-snug text-foreground outline-none"
         />
       ) : (
-        <p className="line-clamp-2 pr-10 text-[14px] font-medium leading-snug text-[#37352F]">
+        <p className="line-clamp-2 pr-10 text-[14px] font-medium leading-snug text-foreground">
           {card.title}
         </p>
       )}
 
       {descPreview && !isEditingTitle && (
-        <p className="mt-1 line-clamp-1 text-[13px] leading-snug text-[#787774]">
+        <p className="mt-1 line-clamp-1 text-[13px] leading-snug text-muted-foreground">
           {descPreview}
         </p>
       )}
@@ -249,7 +249,7 @@ export function KanbanCard({
                     ? "bg-[#EB5757]/10 text-[#EB5757]"
                     : dueToday
                     ? "bg-[#F2994A]/10 text-[#F2994A]"
-                    : "bg-black/[0.04] text-muted-foreground"
+                    : "bg-muted text-muted-foreground"
                 )}
               >
                 <Calendar className="h-3 w-3" />

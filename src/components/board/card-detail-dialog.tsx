@@ -50,6 +50,7 @@ interface CardDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: (cardId: string, data: Partial<Card>) => Promise<void>;
   onDelete: (cardId: string) => Promise<void>;
+  onNavigate?: (direction: "prev" | "next") => void;
 }
 
 const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
@@ -70,6 +71,7 @@ export function CardDetailDialog({
   onOpenChange,
   onUpdate,
   onDelete,
+  onNavigate,
 }: CardDetailDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -134,6 +136,30 @@ export function CardDetailDialog({
     };
   }, []);
 
+  // Arrow key navigation between cards while the dialog is open.
+  useEffect(() => {
+    if (!open || !onNavigate) return;
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      )
+        return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        onNavigate!("next");
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        onNavigate!("prev");
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onNavigate]);
+
   if (!card) return null;
 
   const currentColumn = columns.find((c) => c.id === columnId);
@@ -191,9 +217,9 @@ export function CardDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="fixed left-auto right-0 top-0 bottom-0 grid h-screen w-[50vw] min-w-[500px] max-w-[720px] translate-x-0 translate-y-0 grid-rows-[auto_1fr] gap-0 overflow-hidden rounded-none rounded-l-xl border-l border-border bg-background p-0 ring-0 shadow-[-12px_0_40px_rgba(0,0,0,0.12)] sm:max-w-[720px] data-open:duration-200 data-open:ease-out data-open:slide-in-from-right data-closed:slide-out-to-right"
+        className="fixed inset-0 grid h-screen w-full max-w-full translate-x-0 translate-y-0 grid-rows-[auto_1fr] gap-0 overflow-hidden rounded-none border-0 bg-background p-0 ring-0 shadow-[-12px_0_40px_rgba(0,0,0,0.12)] sm:left-auto sm:right-0 sm:top-0 sm:bottom-0 sm:min-w-[500px] sm:w-[50vw] sm:max-w-[720px] sm:rounded-l-xl sm:border-l sm:border-border data-open:duration-200 data-open:ease-out data-open:slide-in-from-right data-closed:slide-out-to-right"
       >
-        <DialogHeader className="border-b border-border px-10 pt-9 pb-5">
+        <DialogHeader className="border-b border-border px-5 pt-7 pb-4 sm:px-10 sm:pt-9 sm:pb-5">
           <DialogTitle className="sr-only">Card Details</DialogTitle>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="truncate text-[13px] text-muted-foreground">
@@ -217,7 +243,7 @@ export function CardDetailDialog({
           />
         </DialogHeader>
 
-        <div className="overflow-y-auto px-10 pb-10 pt-6">
+        <div className="overflow-y-auto px-5 pb-8 pt-5 sm:px-10 sm:pb-10 sm:pt-6">
           {/* Properties */}
           <div className="space-y-0.5">
             <PropertyRow icon={<CircleDot className="h-3.5 w-3.5" />} label="Status">
@@ -233,7 +259,7 @@ export function CardDetailDialog({
                         className="rounded px-1.5 py-0.5 text-[12px] font-medium"
                         style={{
                           backgroundColor: `${currentColumn.color || "#9B8FBF"}1A`,
-                          color: currentColumn.color || "#37352F",
+                          color: currentColumn.color || "var(--foreground)",
                         }}
                       >
                         {currentColumn.name}

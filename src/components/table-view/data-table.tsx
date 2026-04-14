@@ -125,7 +125,7 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-[#F7F6F3]">
+          <thead className="sticky top-0 z-10 bg-muted">
             <tr>
               {headers.map((h) => {
                 const sField = SORTABLE[h.key];
@@ -209,7 +209,7 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
                       setSelectedCard(card);
                       setDialogOpen(true);
                     }}
-                    className="group cursor-pointer border-b border-border transition-colors hover:bg-[#F7F6F3]"
+                    className="group cursor-pointer border-b border-border transition-colors hover:bg-muted"
                   >
                     <td className="px-3 py-2.5">
                       <span className="text-[13px] font-medium text-foreground">

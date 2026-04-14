@@ -14,10 +14,12 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Your Boards</h1>
-        <p className="text-muted-foreground">
+    <div className="px-4 py-6 md:px-6 md:py-8 animate-fade-in">
+      <div className="mb-6 pl-12 md:pl-0">
+        <h1 className="text-[28px] font-bold leading-tight text-foreground">
+          Your Boards
+        </h1>
+        <p className="mt-1 text-[13px] text-muted-foreground">
           Manage and organize your projects
         </p>
       </div>

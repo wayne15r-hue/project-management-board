@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import type { Board } from "@/types";
 import { formatDistanceToNow } from "date-fns";
@@ -90,8 +90,69 @@ export function BoardList({ boards, userId }: BoardListProps) {
     }
   }
 
+  if (boards.length === 0) {
+    return (
+      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center animate-fade-in">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-background shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <LayoutGrid className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <h2 className="mt-5 text-[18px] font-semibold text-foreground">
+          Create your first board
+        </h2>
+        <p className="mt-1.5 max-w-sm text-[13px] text-muted-foreground">
+          Boards help you organize tasks into columns and track progress across
+          your project.
+        </p>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-2 text-[13px] font-medium text-background transition-colors hover:bg-foreground/90">
+            <Plus className="h-4 w-4" />
+            New board
+          </DialogTrigger>
+          <DialogContent>
+            <form onSubmit={handleCreateBoard}>
+              <DialogHeader>
+                <DialogTitle>Create a new board</DialogTitle>
+                <DialogDescription>
+                  Add a new project board with default columns.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="board-name">Board name</Label>
+                  <Input
+                    id="board-name"
+                    placeholder="My Project"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="board-desc">Description (optional)</Label>
+                  <Textarea
+                    id="board-desc"
+                    placeholder="What is this board for?"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Board
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="stagger-children grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {boards.map((board) => {
         const color = getBoardColor(board.id);
         return (

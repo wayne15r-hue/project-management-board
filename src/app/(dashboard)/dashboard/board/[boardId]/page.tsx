@@ -10,7 +10,7 @@ import { GanttChart } from "@/components/timeline-view/gantt-chart";
 import { useRealtimeCards } from "@/hooks/use-realtime-cards";
 import { useBoardStore, type ViewFilter, type ViewSort } from "@/stores/board-store";
 import { applyViewToColumns } from "@/lib/board-filters";
-import { Loader2 } from "lucide-react";
+import { BoardSkeleton } from "@/components/board/board-skeleton";
 import type { BoardWithDetails, Profile } from "@/types";
 
 async function fetchBoard(boardId: string): Promise<BoardWithDetails> {
@@ -105,11 +105,7 @@ export default function BoardPage() {
   }, [board, filters, sorts, search]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <BoardSkeleton />;
   }
 
   if (!board || !filteredBoard) {
@@ -129,23 +125,28 @@ export default function BoardPage() {
         onViewChange={setActiveView}
       />
 
-      {activeView === "kanban" && (
-        <KanbanBoard
-          board={filteredBoard}
-          members={members}
-          onRefresh={() => refetch()}
-        />
-      )}
+      <div
+        key={activeView}
+        className="flex min-h-0 flex-1 flex-col animate-fade-in"
+      >
+        {activeView === "kanban" && (
+          <KanbanBoard
+            board={filteredBoard}
+            members={members}
+            onRefresh={() => refetch()}
+          />
+        )}
 
-      {activeView === "table" && (
-        <TableView
-          board={filteredBoard}
-          members={members}
-          onRefresh={() => refetch()}
-        />
-      )}
+        {activeView === "table" && (
+          <TableView
+            board={filteredBoard}
+            members={members}
+            onRefresh={() => refetch()}
+          />
+        )}
 
-      {activeView === "timeline" && <GanttChart board={filteredBoard} />}
+        {activeView === "timeline" && <GanttChart board={filteredBoard} />}
+      </div>
     </div>
   );
 }

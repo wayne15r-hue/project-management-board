@@ -21,6 +21,7 @@ import { KanbanColumn } from "./kanban-column";
 import { KanbanCard } from "./kanban-card";
 import { CardDetailDialog } from "./card-detail-dialog";
 import { useBoardStore } from "@/stores/board-store";
+import { useAppStore } from "@/stores/app-store";
 import { isViewActive } from "@/lib/board-filters";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -39,12 +40,22 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { setDragState, filters, sorts, search, clearFilters, clearSorts, setSearch } = useBoardStore();
+  const newCardRequestId = useAppStore((s) => s.newCardRequestId);
   const supabase = createClient();
 
   // Sync local columns when board prop changes (filters, realtime, etc.)
   useEffect(() => {
     setColumns(board.columns);
   }, [board.columns]);
+
+  // Cmd+N -> quick-create a card in the first column
+  useEffect(() => {
+    if (newCardRequestId === 0) return;
+    const first = board.columns[0];
+    if (!first) return;
+    handleAddCard(first.id, "Untitled");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCardRequestId]);
 
   const viewActive = isViewActive(filters, sorts, search);
   const totalVisibleCards = columns.reduce((n, c) => n + c.cards.length, 0);
@@ -361,6 +372,14 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         onOpenChange={setDialogOpen}
         onUpdate={handleUpdateCard}
         onDelete={handleDeleteCard}
+        onNavigate={(dir) => {
+          if (!selectedCard) return;
+          const flat = columns.flatMap((c) => c.cards);
+          const i = flat.findIndex((c) => c.id === selectedCard.id);
+          if (i === -1) return;
+          const next = dir === "next" ? flat[i + 1] : flat[i - 1];
+          if (next) setSelectedCard(next);
+        }}
       />
     </>
   );
@@ -395,7 +414,7 @@ function AddColumnButton({
 
   if (isAdding) {
     return (
-      <div className="h-full w-[300px] shrink-0 space-y-2 rounded-lg border border-[rgba(0,0,0,0.04)] bg-[rgba(0,0,0,0.02)] p-3">
+      <div className="h-full w-[300px] shrink-0 space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -432,7 +451,7 @@ function AddColumnButton({
   return (
     <button
       onClick={() => setIsAdding(true)}
-      className="flex h-10 w-[300px] shrink-0 items-center justify-center gap-1.5 rounded-lg border border-dashed border-[rgba(0,0,0,0.08)] text-[13px] text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-black/[0.02] hover:text-foreground"
+      className="flex h-10 w-[300px] shrink-0 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-[13px] text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
     >
       + Add Column
     </button>

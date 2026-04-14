@@ -73,14 +73,14 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        "group/col flex h-full w-[300px] shrink-0 flex-col rounded-lg border bg-[rgba(0,0,0,0.02)] transition-colors",
+        "group/col flex h-full w-[300px] shrink-0 flex-col rounded-lg border bg-muted/40 transition-colors",
         isOver
           ? "border-foreground/20 bg-foreground/[0.04]"
-          : "border-[rgba(0,0,0,0.04)]"
+          : "border-border/60"
       )}
     >
       {/* Sticky header */}
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg bg-[rgba(251,251,250,0.85)] px-3 py-2.5 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg bg-background/85 px-3 py-2.5 backdrop-blur-sm">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {column.color && (
             <span
@@ -119,13 +119,13 @@ export function KanbanColumn({
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-black/5 hover:text-foreground"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
             aria-label="Add card"
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-black/5 hover:text-foreground">
+            <DropdownMenuTrigger className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground">
               <MoreHorizontal className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -207,7 +207,7 @@ export function KanbanColumn({
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground"
+            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             New

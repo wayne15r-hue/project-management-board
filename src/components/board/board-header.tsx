@@ -73,7 +73,7 @@ export function BoardHeader({ board, members, activeView, onViewChange }: BoardH
   }
 
   return (
-    <div className="flex flex-col gap-3 border-b border-border bg-background px-8 pt-6 pb-0">
+    <div className="flex flex-col gap-3 border-b border-border bg-background px-4 pt-6 pb-0 pl-16 md:px-8 md:pl-8">
       {/* Title row */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
