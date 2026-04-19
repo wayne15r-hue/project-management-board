@@ -32,6 +32,8 @@ export interface Column {
   cards?: Card[];
 }
 
+export type RecurrenceRule = "daily" | "weekly" | "biweekly" | "monthly";
+
 export interface Card {
   id: string;
   column_id: string;
@@ -46,6 +48,8 @@ export interface Card {
   created_by: string;
   created_at: string;
   updated_at: string;
+  recurrence_rule: RecurrenceRule | null;
+  recurrence_parent_id: string | null;
   assignee?: Profile | null;
   custom_field_values?: CustomFieldValue[];
   subtasks?: Subtask[];

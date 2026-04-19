@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendDueDateReminderEmail } from "@/lib/email";
 
 export async function GET(request: Request) {
   // Verify cron secret for Vercel Cron Jobs
@@ -11,9 +12,11 @@ export async function GET(request: Request) {
   const supabase = createAdminClient();
 
   const now = new Date();
-  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  const tomorrowEnd = new Date(todayEnd.getTime() + 24 * 60 * 60 * 1000);
 
-  // Find cards with due dates in the next 24 hours that have an assignee
+  // Find cards with due dates: overdue, today, or tomorrow — that have an assignee
   const { data: cards, error } = await supabase
     .from("cards")
     .select(
@@ -24,8 +27,7 @@ export async function GET(request: Request) {
     )
     .not("assignee_id", "is", null)
     .not("due_date", "is", null)
-    .gte("due_date", now.toISOString())
-    .lte("due_date", in24Hours.toISOString());
+    .lte("due_date", tomorrowEnd.toISOString());
 
   if (error) {
     console.error("Cron error:", error);
@@ -38,35 +40,35 @@ export async function GET(request: Request) {
 
   let sent = 0;
 
-  try {
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  for (const card of cards) {
+    const assignee = card.assignee as unknown as { email: string; full_name: string } | null;
+    if (!assignee?.email) continue;
 
-    for (const card of cards) {
-      const assignee = card.assignee as unknown as { email: string; full_name: string } | null;
-      if (!assignee?.email) continue;
+    const dueDate = new Date(card.due_date!);
+    let urgency: "overdue" | "today" | "tomorrow";
 
-      try {
-        await resend.emails.send({
-          from: "ProjectBoard <onboarding@resend.dev>",
-          to: assignee.email,
-          subject: `Reminder: "${card.title}" is due soon`,
-          html: `
-            <h2>Due Date Reminder</h2>
-            <p>Hi ${assignee.full_name || "there"},</p>
-            <p>The card <strong>${card.title}</strong> is due ${card.due_date ? new Date(card.due_date).toLocaleString() : "soon"}.</p>
-            <p>Priority: ${card.priority}</p>
-            <p><a href="${appUrl}/dashboard/board/${card.board_id}" style="display:inline-block;padding:12px 24px;background:#171717;color:#fff;text-decoration:none;border-radius:8px;">View Board</a></p>
-          `,
-        });
-        sent++;
-      } catch (emailErr) {
-        console.error(`Failed to send reminder for card ${card.id}:`, emailErr);
-      }
+    if (dueDate < todayStart) {
+      urgency = "overdue";
+    } else if (dueDate < todayEnd) {
+      urgency = "today";
+    } else {
+      urgency = "tomorrow";
     }
-  } catch (err) {
-    console.error("Resend initialization failed:", err);
+
+    try {
+      await sendDueDateReminderEmail({
+        to: assignee.email,
+        recipientName: assignee.full_name || "",
+        cardTitle: card.title,
+        boardId: card.board_id,
+        priority: card.priority,
+        dueDate: card.due_date!,
+        urgency,
+      });
+      sent++;
+    } catch (emailErr) {
+      console.error(`Failed to send reminder for card ${card.id}:`, emailErr);
+    }
   }
 
   return NextResponse.json({ sent, total: cards.length });

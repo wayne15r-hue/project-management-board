@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BoardList } from "@/components/board/board-list";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -7,6 +8,12 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user!.id)
+    .single();
 
   const { data: boards } = await supabase
     .from("boards")
@@ -24,6 +31,11 @@ export default async function DashboardPage() {
         </p>
       </div>
       <BoardList boards={boards || []} userId={user!.id} />
+      <OnboardingWizard
+        userName={profile?.full_name || null}
+        boardCount={boards?.length || 0}
+        userId={user!.id}
+      />
     </div>
   );
 }

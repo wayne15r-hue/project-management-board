@@ -30,7 +30,7 @@ const PRIORITY_META: Record<Priority, { label: string; bg: string; text: string 
   low: { label: "Low", bg: "bg-[#E8F5EC]", text: "text-[#1E7F3F]" },
 };
 
-type ColKey = "title" | "status" | "priority" | "assignee" | "due_date" | "created_at";
+type ColKey = "title" | "status" | "priority" | "labels" | "assignee" | "due_date" | "created_at";
 
 const SORTABLE: Partial<Record<ColKey, SortField>> = {
   title: "title",
@@ -116,6 +116,7 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
     { key: "title", label: "Title" },
     { key: "status", label: "Status", width: "w-[180px]" },
     { key: "priority", label: "Priority", width: "w-[120px]" },
+    { key: "labels", label: "Labels", width: "w-[200px]" },
     { key: "assignee", label: "Assignee", width: "w-[200px]" },
     { key: "due_date", label: "Due date", width: "w-[140px]" },
     { key: "created_at", label: "Created", width: "w-[140px]" },
@@ -244,6 +245,33 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
                       >
                         {PRIORITY_META[card.priority].label}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {(() => {
+                        const cardLabels = (card.card_labels || [])
+                          .map((cl) => cl.label)
+                          .filter((l): l is NonNullable<typeof l> => !!l);
+                        return cardLabels.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {cardLabels.slice(0, 3).map((l) => (
+                              <span
+                                key={l.id}
+                                className="inline-flex items-center truncate rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                                style={{ backgroundColor: `${l.color}1A`, color: l.color }}
+                              >
+                                {l.name}
+                              </span>
+                            ))}
+                            {cardLabels.length > 3 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                +{cardLabels.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[12px] text-muted-foreground">—</span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5">
                       {card.assignee ? (

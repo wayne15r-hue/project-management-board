@@ -27,6 +27,7 @@ import {
   Check,
   UserPlus,
   Loader2,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardCustomFields } from "@/components/custom-fields/card-custom-fields";
@@ -41,6 +42,7 @@ import type {
   Column,
   Profile,
   Priority,
+  RecurrenceRule,
   CustomFieldDefinition,
   Label,
 } from "@/types";
@@ -62,6 +64,13 @@ const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
   low: { label: "Low", color: "#27AE60" },
   medium: { label: "Medium", color: "#F2994A" },
   high: { label: "High", color: "#EB5757" },
+};
+
+const RECURRENCE_LABELS: Record<RecurrenceRule, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  biweekly: "Bi-weekly",
+  monthly: "Monthly",
 };
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -86,6 +95,7 @@ export function CardDetailDialog({
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [cardLabels, setCardLabels] = useState<Label[]>([]);
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -103,6 +113,7 @@ export function CardDetailDialog({
       setDueDate(card.due_date ? new Date(card.due_date) : undefined);
       setStartDate(card.start_date ? new Date(card.start_date) : undefined);
       setAssigneeId(card.assignee_id || "");
+      setRecurrenceRule(card.recurrence_rule || null);
       setCardLabels(
         (card.card_labels || [])
           .map((cl) => cl.label)
@@ -412,6 +423,36 @@ export function CardDetailDialog({
 
             <PropertyRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="Due date">
               <DatePickerButton value={dueDate} onChange={changeDueDate} />
+            </PropertyRow>
+
+            <PropertyRow icon={<Repeat className="h-3.5 w-3.5" />} label="Repeat">
+              <Popover>
+                <PopoverTrigger className="inline-flex h-7 items-center gap-1.5 rounded-md px-1.5 text-[13px] hover:bg-accent">
+                  {recurrenceRule ? (
+                    <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[12px] font-medium text-indigo-600 dark:text-indigo-400">
+                      {RECURRENCE_LABELS[recurrenceRule]}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">None</span>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-44 p-1">
+                  {([null, "daily", "weekly", "biweekly", "monthly"] as const).map((rule) => (
+                    <button
+                      key={rule ?? "none"}
+                      type="button"
+                      onClick={() => {
+                        setRecurrenceRule(rule);
+                        performSave({ recurrence_rule: rule });
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent"
+                    >
+                      <span className="flex-1">{rule ? RECURRENCE_LABELS[rule] : "None"}</span>
+                      {rule === recurrenceRule && <Check className="h-3.5 w-3.5" />}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
             </PropertyRow>
           </div>
 

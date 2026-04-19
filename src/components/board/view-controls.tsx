@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -33,7 +33,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { BoardWithDetails, Profile } from "@/types";
+import type { BoardWithDetails, Label, Profile } from "@/types";
 
 interface ViewControlsProps {
   board: BoardWithDetails;
@@ -45,6 +45,7 @@ const FIELD_LABELS: Record<FilterField, string> = {
   priority: "Priority",
   assignee: "Assignee",
   due_date: "Due date",
+  label: "Label",
 };
 
 const OPS_BY_FIELD: Record<FilterField, { value: FilterOp; label: string }[]> = {
@@ -65,6 +66,12 @@ const OPS_BY_FIELD: Record<FilterField, { value: FilterOp; label: string }[]> = 
   due_date: [
     { value: "before", label: "before" },
     { value: "after", label: "after" },
+    { value: "is_empty", label: "is empty" },
+    { value: "is_not_empty", label: "is not empty" },
+  ],
+  label: [
+    { value: "is", label: "is" },
+    { value: "is_not", label: "is not" },
     { value: "is_empty", label: "is empty" },
     { value: "is_not_empty", label: "is not empty" },
   ],
@@ -96,6 +103,18 @@ export function ViewControls({ board, members }: ViewControlsProps) {
     removeSort,
     clearSorts,
   } = useBoardStore();
+
+  const [labels, setLabels] = useState<Label[]>([]);
+  const labelsFetched = useRef(false);
+
+  useEffect(() => {
+    if (labelsFetched.current) return;
+    labelsFetched.current = true;
+    fetch(`/api/boards/${board.id}/labels`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setLabels(data); })
+      .catch(() => {});
+  }, [board.id]);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -192,6 +211,32 @@ export function ViewControls({ board, members }: ViewControlsProps) {
       );
     }
 
+    if (f.field === "label") {
+      return (
+        <Select
+          value={f.value ?? ""}
+          onValueChange={(v) => updateFilter(f.id, { value: v })}
+        >
+          <SelectTrigger size="sm" className="h-7 flex-1 text-[12px]">
+            <SelectValue placeholder="Select…" />
+          </SelectTrigger>
+          <SelectContent>
+            {labels.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: l.color }}
+                  />
+                  {l.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
     return null;
   }
 
@@ -208,6 +253,8 @@ export function ViewControls({ board, members }: ViewControlsProps) {
       value = m?.full_name || m?.email || "…";
     } else if (f.field === "priority") {
       value = value.charAt(0).toUpperCase() + value.slice(1);
+    } else if (f.field === "label") {
+      value = labels.find((l) => l.id === f.value)?.name ?? "…";
     }
     return `${field} ${op} ${value}`;
   }

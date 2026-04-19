@@ -66,33 +66,31 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Send invite email via Resend
-  try {
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Send invite email (fire-and-forget)
+  import("@/lib/email").then(async ({ sendTeamInviteEmail }) => {
+    try {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("name")
+        .eq("id", parsed.data.teamId)
+        .single();
 
-    const { data: team } = await supabase
-      .from("teams")
-      .select("name")
-      .eq("id", parsed.data.teamId)
-      .single();
+      const { data: inviterProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
 
-    await resend.emails.send({
-      from: "ProjectBoard <onboarding@resend.dev>",
-      to: parsed.data.email,
-      subject: `You've been invited to join ${team?.name || "a team"} on ProjectBoard`,
-      html: `
-        <h2>Team Invitation</h2>
-        <p>You've been invited to join <strong>${team?.name || "a team"}</strong> on ProjectBoard.</p>
-        <p><a href="${appUrl}/invite/${invite.token}" style="display:inline-block;padding:12px 24px;background:#171717;color:#fff;text-decoration:none;border-radius:8px;">Accept Invitation</a></p>
-        <p>This invitation expires in 7 days.</p>
-      `,
-    });
-  } catch (emailError) {
-    console.error("Failed to send invite email:", emailError);
-    // Don't fail the request - invite is still created
-  }
+      await sendTeamInviteEmail({
+        to: parsed.data.email,
+        teamName: team?.name || "a team",
+        inviterName: inviterProfile?.full_name || "A teammate",
+        inviteToken: invite.token,
+      });
+    } catch (emailError) {
+      console.error("Failed to send invite email:", emailError);
+    }
+  });
 
   return NextResponse.json(invite, { status: 201 });
 }

@@ -32,6 +32,16 @@ function matchFilter(card: Card, filter: ViewFilter): boolean {
       if (filter.op === "after") return d > v;
       return true;
     }
+    case "label": {
+      const labelIds = (card.card_labels || [])
+        .map((cl) => cl.label?.id)
+        .filter(Boolean);
+      if (filter.op === "is_empty") return labelIds.length === 0;
+      if (filter.op === "is_not_empty") return labelIds.length > 0;
+      if (filter.op === "is") return labelIds.includes(filter.value!);
+      if (filter.op === "is_not") return !labelIds.includes(filter.value!);
+      return true;
+    }
     default:
       return true;
   }

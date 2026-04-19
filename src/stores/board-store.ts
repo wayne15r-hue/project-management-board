@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type FilterField = "status" | "priority" | "assignee" | "due_date";
+export type FilterField = "status" | "priority" | "assignee" | "due_date" | "label";
 export type FilterOp =
   | "is"
   | "is_not"

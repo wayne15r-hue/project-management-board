@@ -50,6 +50,7 @@ export async function PATCH(
   if (parsed.data.due_date !== undefined) updateData.due_date = parsed.data.due_date;
   if (parsed.data.start_date !== undefined) updateData.start_date = parsed.data.start_date;
   if (parsed.data.assignee_id !== undefined) updateData.assignee_id = parsed.data.assignee_id;
+  if (parsed.data.recurrence_rule !== undefined) updateData.recurrence_rule = parsed.data.recurrence_rule;
 
   // Fetch existing card for change tracking
   const { data: existing } = await supabase
@@ -109,32 +110,135 @@ export async function PATCH(
     }
   }
 
-  // Send notification email if assignee changed
+  // Send notification email if assignee changed (don't email yourself)
   if (
     parsed.data.assignee_id &&
     existing &&
     parsed.data.assignee_id !== existing.assignee_id &&
-    data.assignee?.email
+    data.assignee?.email &&
+    parsed.data.assignee_id !== user?.id
   ) {
-    try {
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
+    // Fire-and-forget: don't block the response
+    import("@/lib/email").then(async ({ sendCardAssignedEmail }) => {
+      try {
+        const { data: board } = await supabase
+          .from("boards")
+          .select("name")
+          .eq("id", data.board_id)
+          .single();
 
-      await resend.emails.send({
-        from: "ProjectBoard <onboarding@resend.dev>",
-        to: data.assignee.email,
-        subject: `You've been assigned to "${data.title}"`,
-        html: `
-          <h2>Card Assignment</h2>
-          <p>You've been assigned to <strong>${data.title}</strong>.</p>
-          <p>Priority: ${data.priority}</p>
-          ${data.due_date ? `<p>Due: ${new Date(data.due_date).toLocaleDateString()}</p>` : ""}
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/board/${data.board_id}">View Board</a></p>
-        `,
-      });
-    } catch (emailErr) {
-      console.error("Failed to send assignment email:", emailErr);
-    }
+        await sendCardAssignedEmail({
+          to: data.assignee!.email,
+          assigneeName: data.assignee!.full_name || "",
+          cardTitle: data.title,
+          boardName: board?.name || "Board",
+          boardId: data.board_id,
+          priority: data.priority,
+          dueDate: data.due_date,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send assignment email:", emailErr);
+      }
+    });
+  }
+
+  // Handle recurring task: when moved to the last column, create a new card in the first column
+  if (
+    parsed.data.column_id &&
+    existing &&
+    parsed.data.column_id !== existing.column_id &&
+    data.recurrence_rule
+  ) {
+    // Fire-and-forget to avoid blocking the response
+    (async () => {
+      try {
+        // Get all columns for this board, ordered by position
+        const { data: columns } = await supabase
+          .from("columns")
+          .select("id, position")
+          .eq("board_id", data.board_id)
+          .order("position", { ascending: true });
+
+        if (!columns || columns.length < 2) return;
+
+        const lastColumn = columns[columns.length - 1];
+        const firstColumn = columns[0];
+
+        // Only trigger if moved to the last column
+        if (parsed.data.column_id !== lastColumn.id) return;
+
+        // Calculate new due date based on recurrence rule
+        let newDueDate: string | null = null;
+        if (data.due_date) {
+          const base = new Date(data.due_date);
+          switch (data.recurrence_rule) {
+            case "daily":
+              base.setDate(base.getDate() + 1);
+              break;
+            case "weekly":
+              base.setDate(base.getDate() + 7);
+              break;
+            case "biweekly":
+              base.setDate(base.getDate() + 14);
+              break;
+            case "monthly":
+              base.setMonth(base.getMonth() + 1);
+              break;
+          }
+          newDueDate = base.toISOString();
+        }
+
+        // Get current max position in the first column
+        const { data: maxCard } = await supabase
+          .from("cards")
+          .select("position")
+          .eq("column_id", firstColumn.id)
+          .order("position", { ascending: false })
+          .limit(1)
+          .single();
+
+        const newPosition = (maxCard?.position ?? -1) + 1;
+
+        // Create the recurring copy
+        const { data: newCard } = await supabase
+          .from("cards")
+          .insert({
+            column_id: firstColumn.id,
+            board_id: data.board_id,
+            title: data.title,
+            description: data.description,
+            priority: data.priority,
+            position: newPosition,
+            due_date: newDueDate,
+            start_date: null,
+            assignee_id: data.assignee_id,
+            created_by: data.created_by,
+            recurrence_rule: data.recurrence_rule,
+            recurrence_parent_id: data.id,
+          })
+          .select()
+          .single();
+
+        // Copy labels from original card to new card
+        if (newCard) {
+          const { data: labels } = await supabase
+            .from("card_labels")
+            .select("label_id")
+            .eq("card_id", cardId);
+
+          if (labels && labels.length > 0) {
+            await supabase.from("card_labels").insert(
+              labels.map((l) => ({
+                card_id: newCard.id,
+                label_id: l.label_id,
+              }))
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to create recurring card:", err);
+      }
+    })();
   }
 
   return NextResponse.json(data);

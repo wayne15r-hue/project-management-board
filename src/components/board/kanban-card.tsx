@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, isPast, isToday } from "date-fns";
-import { Calendar, MoreHorizontal, Pencil, Trash2, Flag, ArrowRight, FileText, CheckSquare, Paperclip } from "lucide-react";
+import { Calendar, MoreHorizontal, Pencil, Trash2, Flag, ArrowRight, FileText, CheckSquare, Paperclip, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -265,7 +265,7 @@ export function KanbanCard({
       )}
 
       {/* Footer metadata */}
-      {(dueDate || card.assignee || card.description || subtaskCount > 0 || attachmentCount > 0) && (
+      {(dueDate || card.assignee || card.description || subtaskCount > 0 || attachmentCount > 0 || card.recurrence_rule) && (
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {subtaskCount > 0 && (
@@ -284,6 +284,14 @@ export function KanbanCard({
               >
                 <Paperclip className="h-3 w-3" />
                 {attachmentCount}
+              </span>
+            )}
+            {card.recurrence_rule && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[11px] text-indigo-500"
+                title={`Repeats ${card.recurrence_rule}`}
+              >
+                <Repeat className="h-3 w-3" />
               </span>
             )}
             {dueDate && (
