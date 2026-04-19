@@ -37,7 +37,7 @@ export function useKeyboardShortcut({
       if (meta && !wantedMeta) return;
       if (!meta && (e.metaKey || e.ctrlKey)) return;
       if (shift && !e.shiftKey) return;
-      if (e.key.toLowerCase() !== key.toLowerCase()) return;
+      if (e.key?.toLowerCase() !== key.toLowerCase()) return;
       if (ignoreInInputs && isInTextField(e.target)) return;
       handler(e);
     }

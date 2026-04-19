@@ -28,6 +28,7 @@ import {
   UserPlus,
   Loader2,
   Repeat,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardCustomFields } from "@/components/custom-fields/card-custom-fields";
@@ -73,6 +74,17 @@ const RECURRENCE_LABELS: Record<RecurrenceRule, string> = {
   monthly: "Monthly",
 };
 
+const COVER_COLORS: { value: string; label: string }[] = [
+  { value: "#E8A87C", label: "Peach" },
+  { value: "#7CAFC4", label: "Sky" },
+  { value: "#9B8FBF", label: "Lavender" },
+  { value: "#8BAE68", label: "Sage" },
+  { value: "#D4846A", label: "Coral" },
+  { value: "#C4A464", label: "Amber" },
+  { value: "#EB5757", label: "Rose" },
+  { value: "#6B9EAE", label: "Teal" },
+];
+
 type SaveStatus = "idle" | "saving" | "saved";
 
 export function CardDetailDialog({
@@ -96,6 +108,7 @@ export function CardDetailDialog({
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [cardLabels, setCardLabels] = useState<Label[]>([]);
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(null);
+  const [coverColor, setCoverColor] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -114,6 +127,7 @@ export function CardDetailDialog({
       setStartDate(card.start_date ? new Date(card.start_date) : undefined);
       setAssigneeId(card.assignee_id || "");
       setRecurrenceRule(card.recurrence_rule || null);
+      setCoverColor(card.cover_color || null);
       setCardLabels(
         (card.card_labels || [])
           .map((cl) => cl.label)
@@ -423,6 +437,62 @@ export function CardDetailDialog({
 
             <PropertyRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="Due date">
               <DatePickerButton value={dueDate} onChange={changeDueDate} />
+            </PropertyRow>
+
+            <PropertyRow icon={<Palette className="h-3.5 w-3.5" />} label="Cover">
+              <Popover>
+                <PopoverTrigger className="inline-flex h-7 items-center gap-1.5 rounded-md px-1.5 text-[13px] hover:bg-accent">
+                  {coverColor ? (
+                    <>
+                      <span
+                        className="h-3 w-5 rounded"
+                        style={{ backgroundColor: coverColor }}
+                      />
+                      <span className="text-foreground">
+                        {COVER_COLORS.find((c) => c.value === coverColor)
+                          ?.label || "Custom"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">None</span>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-56 p-2">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverColor(null);
+                        performSave({ cover_color: null });
+                      }}
+                      className={cn(
+                        "flex h-9 items-center justify-center rounded border border-dashed border-border text-[11px] text-muted-foreground hover:bg-accent",
+                        !coverColor && "border-foreground/40"
+                      )}
+                    >
+                      None
+                    </button>
+                    {COVER_COLORS.map((c) => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => {
+                          setCoverColor(c.value);
+                          performSave({ cover_color: c.value });
+                        }}
+                        aria-label={c.label}
+                        className={cn(
+                          "h-9 rounded border-2 transition-transform hover:scale-[1.04]",
+                          coverColor === c.value
+                            ? "border-foreground"
+                            : "border-transparent"
+                        )}
+                        style={{ backgroundColor: c.value }}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </PropertyRow>
 
             <PropertyRow icon={<Repeat className="h-3.5 w-3.5" />} label="Repeat">

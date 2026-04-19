@@ -20,6 +20,7 @@ export const updateCardSchema = z.object({
   start_date: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   recurrence_rule: z.enum(["daily", "weekly", "biweekly", "monthly"]).nullable().optional(),
+  cover_color: z.string().nullable().optional(),
 });
 
 export const moveCardSchema = z.object({

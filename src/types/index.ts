@@ -12,6 +12,13 @@ export interface Profile {
   updated_at: string;
 }
 
+export type BoardBackground =
+  | "default"
+  | "gradient-blue"
+  | "gradient-purple"
+  | "gradient-green"
+  | "dark";
+
 export interface Board {
   id: string;
   name: string;
@@ -19,6 +26,7 @@ export interface Board {
   owner_id: string;
   created_at: string;
   updated_at: string;
+  background_theme: BoardBackground | null;
   columns?: Column[];
 }
 
@@ -50,6 +58,7 @@ export interface Card {
   updated_at: string;
   recurrence_rule: RecurrenceRule | null;
   recurrence_parent_id: string | null;
+  cover_color: string | null;
   assignee?: Profile | null;
   custom_field_values?: CustomFieldValue[];
   subtasks?: Subtask[];

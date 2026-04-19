@@ -30,7 +30,7 @@ interface BoardUIStore {
   activeDragSourceColumnId: string | null;
   setDragState: (cardId: string | null, columnId: string | null) => void;
 
-  activeView: "kanban" | "table" | "timeline";
+  activeView: "kanban" | "table" | "timeline" | "analytics";
   setActiveView: (view: BoardUIStore["activeView"]) => void;
 
   search: string;

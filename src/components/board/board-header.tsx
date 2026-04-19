@@ -13,34 +13,57 @@ import {
   Kanban,
   Table2,
   GanttChart,
+  BarChart3,
   MoreHorizontal,
   Pencil,
   Trash2,
   Settings,
   Share2,
+  Palette,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ViewControls } from "./view-controls";
-import type { BoardWithDetails, Profile } from "@/types";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { BOARD_THEMES } from "@/lib/board-themes";
+import type { BoardBackground, BoardWithDetails, Profile } from "@/types";
+
+type BoardView = "kanban" | "table" | "timeline" | "analytics";
 
 interface BoardHeaderProps {
   board: BoardWithDetails;
   members: Profile[];
-  activeView: "kanban" | "table" | "timeline";
-  onViewChange: (view: "kanban" | "table" | "timeline") => void;
+  activeView: BoardView;
+  onViewChange: (view: BoardView) => void;
+  presence?: { id: string; name: string; avatar_url: string | null }[];
 }
 
 const views = [
   { id: "kanban" as const, label: "Board", icon: Kanban },
   { id: "table" as const, label: "Table", icon: Table2 },
   { id: "timeline" as const, label: "Timeline", icon: GanttChart },
+  { id: "analytics" as const, label: "Analytics", icon: BarChart3 },
 ];
 
-export function BoardHeader({ board, members, activeView, onViewChange }: BoardHeaderProps) {
+export function BoardHeader({ board, members, activeView, onViewChange, presence = [] }: BoardHeaderProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
+
+  async function handleSetTheme(theme: BoardBackground) {
+    try {
+      const res = await fetch(`/api/boards/${board.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ background_theme: theme }),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      toast.error("Failed to update background");
+    }
+  }
 
   async function handleRename() {
     if (name.trim() && name.trim() !== board.name) {
@@ -107,7 +130,69 @@ export function BoardHeader({ board, members, activeView, onViewChange }: BoardH
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {presence.length > 0 && (
+            <div className="mr-1 flex -space-x-1.5">
+              {presence.slice(0, 4).map((p) => (
+                <div
+                  key={p.id}
+                  title={`${p.name} is here`}
+                  className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-[#7CAFC4] text-[10px] font-semibold text-white"
+                  style={
+                    p.avatar_url
+                      ? {
+                          backgroundImage: `url(${p.avatar_url})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
+                  {!p.avatar_url && (p.name?.charAt(0).toUpperCase() || "?")}
+                  <span className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-background bg-[#27AE60]" />
+                </div>
+              ))}
+              {presence.length > 4 && (
+                <div className="flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-background bg-muted px-1 text-[10px] font-semibold text-muted-foreground">
+                  +{presence.length - 4}
+                </div>
+              )}
+            </div>
+          )}
+          <Popover>
+            <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Palette className="h-3.5 w-3.5" />
+              Theme
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-2">
+              <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Background
+              </p>
+              <div className="mt-1 grid grid-cols-1 gap-1">
+                {BOARD_THEMES.map((t) => {
+                  const active = (board.background_theme ?? "default") === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleSetTheme(t.id)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-accent",
+                        active && "bg-accent"
+                      )}
+                    >
+                      <span
+                        className="h-5 w-8 rounded-md border border-border"
+                        style={{ background: t.preview }}
+                      />
+                      <span className="flex-1 text-foreground">{t.label}</span>
+                      {active && <Check className="h-3.5 w-3.5 text-foreground" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
           <button
             type="button"
             className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"

@@ -51,6 +51,7 @@ export async function PATCH(
   if (parsed.data.start_date !== undefined) updateData.start_date = parsed.data.start_date;
   if (parsed.data.assignee_id !== undefined) updateData.assignee_id = parsed.data.assignee_id;
   if (parsed.data.recurrence_rule !== undefined) updateData.recurrence_rule = parsed.data.recurrence_rule;
+  if (parsed.data.cover_color !== undefined) updateData.cover_color = parsed.data.cover_color;
 
   // Fetch existing card for change tracking
   const { data: existing } = await supabase

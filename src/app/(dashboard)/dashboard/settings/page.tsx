@@ -28,6 +28,7 @@ export default async function SettingsPage() {
         userId={user.id}
         email={user.email || ""}
         initialName={profile?.full_name || ""}
+        initialAvatarUrl={profile?.avatar_url || null}
       />
     </div>
   );

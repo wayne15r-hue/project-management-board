@@ -29,13 +29,19 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   User as UserIcon,
+  Sun,
+  Moon,
+  Monitor,
+  Keyboard,
 } from "lucide-react";
+import { useTheme } from "@/components/shared/theme-provider";
 import type { Board } from "@/types";
 
 interface SidebarProps {
   boards: Board[];
   userEmail: string;
   userName: string | null;
+  userAvatarUrl?: string | null;
 }
 
 const BOARD_COLORS = [
@@ -66,7 +72,7 @@ function initials(name: string | null, email: string) {
     .join("");
 }
 
-export function Sidebar({ boards, userEmail, userName }: SidebarProps) {
+export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -76,6 +82,8 @@ export function Sidebar({ boards, userEmail, userName }: SidebarProps) {
   const toggle = useAppStore((s) => s.toggleSidebar);
   const mobileOpen = useAppStore((s) => s.mobileSidebarOpen);
   const setMobileOpen = useAppStore((s) => s.setMobileSidebarOpen);
+  const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
+  const { theme, setTheme } = useTheme();
 
   // Hydrate collapsed state from localStorage + responsive auto-collapse.
   useEffect(() => {
@@ -301,8 +309,19 @@ export function Sidebar({ boards, userEmail, userName }: SidebarProps) {
                 collapsed ? "justify-center p-1.5" : "px-2 py-1.5"
               )}
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7CAFC4] text-[11px] font-semibold text-white">
-                {initials(userName, userEmail)}
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#7CAFC4] text-[11px] font-semibold text-white"
+                style={
+                  userAvatarUrl
+                    ? {
+                        backgroundImage: `url(${userAvatarUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              >
+                {!userAvatarUrl && initials(userName, userEmail)}
               </div>
               {!collapsed && (
                 <>
@@ -318,17 +337,56 @@ export function Sidebar({ boards, userEmail, userName }: SidebarProps) {
                 </>
               )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[216px]">
+            <DropdownMenuContent align="start" className="w-[244px]">
+              <div className="flex flex-col gap-0.5 px-1.5 py-1">
+                <span className="text-[13px] font-semibold text-foreground">
+                  {userName || "User"}
+                </span>
+                <span className="truncate text-[11px] font-normal text-muted-foreground">
+                  {userEmail}
+                </span>
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
                 <UserIcon className="mr-2 h-4 w-4" />
-                Profile
+                Profile settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+              <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
+                <Keyboard className="mr-2 h-4 w-4" />
+                Keyboard shortcuts
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <div className="px-1.5 py-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Theme
+                </span>
+              </div>
+              <div className="flex items-center gap-1 px-2 pb-1.5">
+                <ThemeButton
+                  active={theme === "light"}
+                  onClick={() => setTheme("light")}
+                  label="Light"
+                  icon={<Sun className="h-3.5 w-3.5" />}
+                />
+                <ThemeButton
+                  active={theme === "dark"}
+                  onClick={() => setTheme("dark")}
+                  label="Dark"
+                  icon={<Moon className="h-3.5 w-3.5" />}
+                />
+                <ThemeButton
+                  active={theme === "system"}
+                  onClick={() => setTheme("system")}
+                  label="Auto"
+                  icon={<Monitor className="h-3.5 w-3.5" />}
+                />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  if (confirm("Sign out of ProjectBoard?")) handleSignOut();
+                }}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
@@ -337,6 +395,34 @@ export function Sidebar({ boards, userEmail, userName }: SidebarProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+function ThemeButton({
+  active,
+  onClick,
+  label,
+  icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 flex-col items-center gap-1 rounded-md border py-1.5 text-[11px] font-medium transition-colors",
+        active
+          ? "border-foreground/20 bg-accent text-foreground"
+          : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+      )}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

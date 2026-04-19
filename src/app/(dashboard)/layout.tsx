@@ -35,6 +35,7 @@ export default async function DashboardLayout({
         boards={boards || []}
         userEmail={user.email || ""}
         userName={profile?.full_name || null}
+        userAvatarUrl={profile?.avatar_url || null}
       />
       <main className="relative flex min-w-0 flex-1 flex-col overflow-auto">
         <MobileSidebarToggle />

@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 const commentSchema = z.object({
   text: z.string().min(1, "Comment is required").max(2000),
+  parent_id: z.string().uuid().nullable().optional(),
 });
 
 export async function POST(
@@ -33,7 +34,9 @@ export async function POST(
       card_id: cardId,
       actor_id: user.id,
       action: "commented",
-      changes: { text: parsed.data.text },
+      changes: parsed.data.parent_id
+        ? { text: parsed.data.text, parent_id: parsed.data.parent_id }
+        : { text: parsed.data.text },
     })
     .select(
       "*, actor:profiles!activity_log_actor_id_fkey(id, full_name, avatar_url, email)"

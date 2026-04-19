@@ -8,6 +8,10 @@ export const createBoardSchema = z.object({
 export const updateBoardSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
+  background_theme: z
+    .enum(["default", "gradient-blue", "gradient-purple", "gradient-green", "dark"])
+    .nullable()
+    .optional(),
 });
 
 export const createColumnSchema = z.object({

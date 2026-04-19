@@ -7,10 +7,14 @@ import { KanbanBoard } from "@/components/board/kanban-board";
 import { BoardHeader } from "@/components/board/board-header";
 import { TableView } from "@/components/table-view/data-table";
 import { GanttChart } from "@/components/timeline-view/gantt-chart";
+import { BoardAnalytics } from "@/components/analytics/board-analytics";
 import { useRealtimeCards } from "@/hooks/use-realtime-cards";
+import { useBoardPresence } from "@/hooks/use-board-presence";
 import { useBoardStore, type ViewFilter, type ViewSort } from "@/stores/board-store";
 import { applyViewToColumns } from "@/lib/board-filters";
+import { getBoardThemeClass } from "@/lib/board-themes";
 import { BoardSkeleton } from "@/components/board/board-skeleton";
+import { cn } from "@/lib/utils";
 import type { BoardWithDetails, Profile } from "@/types";
 
 async function fetchBoard(boardId: string): Promise<BoardWithDetails> {
@@ -95,6 +99,7 @@ export default function BoardPage() {
   });
 
   useRealtimeCards(boardId);
+  const presence = useBoardPresence(boardId);
 
   const filteredBoard = useMemo<BoardWithDetails | undefined>(() => {
     if (!board) return undefined;
@@ -116,13 +121,16 @@ export default function BoardPage() {
     );
   }
 
+  const themeClass = getBoardThemeClass(board.background_theme);
+
   return (
-    <div className="flex h-full flex-col">
+    <div className={cn("flex h-full flex-col transition-colors duration-300", themeClass)}>
       <BoardHeader
         board={board}
         members={members}
         activeView={activeView}
         onViewChange={setActiveView}
+        presence={presence}
       />
 
       <div
@@ -146,6 +154,10 @@ export default function BoardPage() {
         )}
 
         {activeView === "timeline" && <GanttChart board={filteredBoard} />}
+
+        {activeView === "analytics" && (
+          <BoardAnalytics board={filteredBoard} members={members} />
+        )}
       </div>
     </div>
   );

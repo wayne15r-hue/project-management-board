@@ -115,7 +115,7 @@ export function KanbanCard({
       {...(isEditingTitle ? {} : attributes)}
       {...(isEditingTitle ? {} : listeners)}
       className={cn(
-        "group/card relative mx-1.5 my-1 cursor-pointer rounded-lg border border-border bg-card px-[14px] py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.4)]",
+        "group/card relative mx-1.5 my-1 cursor-pointer overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.4)]",
         isDragOverlay && "rotate-[2deg] opacity-90 shadow-[0_12px_32px_rgba(0,0,0,0.18)]"
       )}
       onClick={(e) => {
@@ -130,6 +130,12 @@ export function KanbanCard({
         setIsEditingTitle(true);
       }}
     >
+      {card.cover_color && (
+        <div
+          className="-mx-px -mt-px mb-2 h-2 w-[calc(100%+2px)]"
+          style={{ backgroundColor: card.cover_color }}
+        />
+      )}
       {/* Quick actions menu */}
       {!isDragOverlay && (columns.length > 0 || onDelete) && (
         <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover/card:opacity-100">

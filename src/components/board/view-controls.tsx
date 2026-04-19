@@ -120,7 +120,7 @@ export function ViewControls({ board, members }: ViewControlsProps) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key?.toLowerCase() === "k") {
         e.preventDefault();
         searchRef.current?.focus();
       }
