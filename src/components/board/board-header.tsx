@@ -14,6 +14,7 @@ import {
   Table2,
   GanttChart,
   BarChart3,
+  CalendarDays,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -21,7 +22,11 @@ import {
   Share2,
   Palette,
   Check,
+  Upload,
+  FileJson,
+  FileSpreadsheet,
 } from "lucide-react";
+import { ImportCardsDialog } from "./import-cards-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ViewControls } from "./view-controls";
@@ -29,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BOARD_THEMES } from "@/lib/board-themes";
 import type { BoardBackground, BoardWithDetails, Profile } from "@/types";
 
-type BoardView = "kanban" | "table" | "timeline" | "analytics";
+type BoardView = "kanban" | "table" | "timeline" | "calendar" | "analytics";
 
 interface BoardHeaderProps {
   board: BoardWithDetails;
@@ -43,6 +48,7 @@ const views = [
   { id: "kanban" as const, label: "Board", icon: Kanban },
   { id: "table" as const, label: "Table", icon: Table2 },
   { id: "timeline" as const, label: "Timeline", icon: GanttChart },
+  { id: "calendar" as const, label: "Calendar", icon: CalendarDays },
   { id: "analytics" as const, label: "Analytics", icon: BarChart3 },
 ];
 
@@ -50,6 +56,17 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
+  const [importOpen, setImportOpen] = useState(false);
+
+  function handleExport(kind: "csv" | "json") {
+    const url = `/api/boards/${board.id}/export?format=${kind}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${board.name}-export.${kind}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 
   async function handleSetTheme(theme: BoardBackground) {
     try {
@@ -213,6 +230,18 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Export as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import from CSV
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Board
@@ -247,6 +276,14 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
 
         <ViewControls board={board} members={members} />
       </div>
+
+      <ImportCardsDialog
+        boardId={board.id}
+        firstColumnId={board.columns[0]?.id ?? null}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => router.refresh()}
+      />
     </div>
   );
 }

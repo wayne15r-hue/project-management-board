@@ -21,13 +21,18 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Add signed URLs for viewing/downloading
+  // Add signed URLs for viewing/downloading. If the storage bucket isn't
+  // configured yet, fall back to null URLs rather than throwing.
   const withUrls = await Promise.all(
     (data || []).map(async (a) => {
-      const { data: signed } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(a.storage_path, 60 * 60);
-      return { ...a, url: signed?.signedUrl ?? null };
+      try {
+        const { data: signed } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(a.storage_path, 60 * 60);
+        return { ...a, url: signed?.signedUrl ?? null };
+      } catch {
+        return { ...a, url: null };
+      }
     })
   );
 
@@ -64,6 +69,16 @@ export async function POST(
     .upload(path, file, { contentType: file.type, upsert: false });
 
   if (uploadError) {
+    const msg = (uploadError.message || "").toLowerCase();
+    if (msg.includes("bucket not found") || msg.includes("not found")) {
+      return NextResponse.json(
+        {
+          error:
+            'File attachments aren\'t configured yet. Create a private "attachments" bucket in Supabase Storage to enable uploads.',
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
@@ -81,15 +96,25 @@ export async function POST(
     .single();
 
   if (error) {
-    await supabase.storage.from(BUCKET).remove([path]);
+    try {
+      await supabase.storage.from(BUCKET).remove([path]);
+    } catch {
+      // ignore cleanup errors
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: signed } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, 60 * 60);
+  let signedUrl: string | null = null;
+  try {
+    const { data: signed } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(path, 60 * 60);
+    signedUrl = signed?.signedUrl ?? null;
+  } catch {
+    signedUrl = null;
+  }
 
-  return NextResponse.json({ ...data, url: signed?.signedUrl ?? null }, { status: 201 });
+  return NextResponse.json({ ...data, url: signedUrl }, { status: 201 });
 }
 
 export async function DELETE(
@@ -109,7 +134,11 @@ export async function DELETE(
     .single();
 
   if (row?.storage_path) {
-    await supabase.storage.from(BUCKET).remove([row.storage_path]);
+    try {
+      await supabase.storage.from(BUCKET).remove([row.storage_path]);
+    } catch {
+      // ignore — bucket may not exist; still remove DB row
+    }
   }
 
   const { error } = await supabase.from("attachments").delete().eq("id", id);

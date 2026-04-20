@@ -99,6 +99,20 @@ export function BoardAnalytics({ board, members }: BoardAnalyticsProps) {
       .slice(0, 8);
   }, [cards, members]);
 
+  const byLabel = useMemo(() => {
+    const counts = new Map<string, { name: string; color: string; count: number }>();
+    for (const c of cards) {
+      for (const cl of c.card_labels ?? []) {
+        const lab = cl.label;
+        if (!lab) continue;
+        const cur = counts.get(lab.id);
+        if (cur) cur.count += 1;
+        else counts.set(lab.id, { name: lab.name, color: lab.color, count: 1 });
+      }
+    }
+    return Array.from(counts.values()).sort((a, b) => b.count - a.count);
+  }, [cards]);
+
   const last7 = useMemo(() => {
     const days: { date: Date; label: string; created: number; done: number }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -231,6 +245,38 @@ export function BoardAnalytics({ board, members }: BoardAnalyticsProps) {
             )}
           </Panel>
         </div>
+
+        {/* Label distribution */}
+        {byLabel.length > 0 && (
+          <Panel title="Cards by label">
+            <div className="space-y-2.5">
+              {byLabel.map((l) => {
+                const max = Math.max(...byLabel.map((x) => x.count), 1);
+                const w = Math.round((l.count / max) * 100);
+                return (
+                  <div key={l.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="flex items-center gap-2 truncate font-medium text-foreground">
+                        <span
+                          className="h-2.5 w-2.5 rounded-sm"
+                          style={{ backgroundColor: l.color }}
+                        />
+                        {l.name}
+                      </span>
+                      <span className="text-muted-foreground">{l.count}</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-[width] duration-500 ease-out"
+                        style={{ width: `${w}%`, backgroundColor: l.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+        )}
 
         {/* 7-day trend */}
         <Panel title="Last 7 days">

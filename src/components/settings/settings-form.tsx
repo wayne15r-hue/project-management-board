@@ -77,7 +77,16 @@ export function SettingsForm({
       const { error: uploadErr } = await supabase.storage
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadErr) throw uploadErr;
+      if (uploadErr) {
+        const msg = (uploadErr.message || "").toLowerCase();
+        if (msg.includes("bucket not found") || msg.includes("not found")) {
+          toast.error(
+            "Avatar storage isn't configured yet. Ask an admin to create the \"avatars\" bucket."
+          );
+          return;
+        }
+        throw uploadErr;
+      }
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = data.publicUrl;

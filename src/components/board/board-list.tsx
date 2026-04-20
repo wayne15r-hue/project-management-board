@@ -570,10 +570,17 @@ function BoardRow({
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => router.push(`/dashboard/board/${board.id}`)}
-      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/dashboard/board/${board.id}`);
+        }
+      }}
+      className="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
     >
       <div
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[12px] font-semibold text-white"
@@ -630,6 +637,6 @@ function BoardRow({
       >
         <Star className="h-4 w-4" fill={favorite ? "currentColor" : "none"} />
       </button>
-    </button>
+    </div>
   );
 }

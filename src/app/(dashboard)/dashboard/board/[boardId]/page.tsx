@@ -8,6 +8,7 @@ import { BoardHeader } from "@/components/board/board-header";
 import { TableView } from "@/components/table-view/data-table";
 import { GanttChart } from "@/components/timeline-view/gantt-chart";
 import { BoardAnalytics } from "@/components/analytics/board-analytics";
+import { CalendarView } from "@/components/board/calendar-view";
 import { useRealtimeCards } from "@/hooks/use-realtime-cards";
 import { useBoardPresence } from "@/hooks/use-board-presence";
 import { useBoardStore, type ViewFilter, type ViewSort } from "@/stores/board-store";
@@ -154,6 +155,14 @@ export default function BoardPage() {
         )}
 
         {activeView === "timeline" && <GanttChart board={filteredBoard} />}
+
+        {activeView === "calendar" && (
+          <CalendarView
+            board={filteredBoard}
+            members={members}
+            onRefresh={() => refetch()}
+          />
+        )}
 
         {activeView === "analytics" && (
           <BoardAnalytics board={filteredBoard} members={members} />
