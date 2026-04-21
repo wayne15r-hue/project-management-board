@@ -22,6 +22,7 @@ import {
   Plus,
   LogOut,
   Users,
+  MessageSquare,
   LayoutGrid,
   Settings,
   MoreHorizontal,
@@ -185,6 +186,13 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarP
               active={pathname === "/dashboard/teams"}
               icon={<Users className="h-4 w-4" />}
               label="Teams"
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/dashboard/chat"
+              active={pathname.startsWith("/dashboard/chat")}
+              icon={<MessageSquare className="h-4 w-4" />}
+              label="Chat"
               collapsed={collapsed}
             />
           </div>

@@ -8,15 +8,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "@/components/shared/theme-provider";
-import { Sun, Moon, Monitor, Upload, Loader2, X } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Upload,
+  Loader2,
+  X,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface UsageRow {
+  feature: string;
+  input_tokens: number;
+  output_tokens: number;
+}
 
 interface SettingsFormProps {
   userId: string;
   email: string;
   initialName: string;
   initialAvatarUrl: string | null;
+  aiConfigured?: boolean;
+  aiModel?: string;
+  usage?: UsageRow[];
 }
+
+const DAILY_LIMIT = 50;
 
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024; // 3MB
 
@@ -25,6 +46,9 @@ export function SettingsForm({
   email,
   initialName,
   initialAvatarUrl,
+  aiConfigured = false,
+  aiModel = "llama-3.3-70b-versatile",
+  usage = [],
 }: SettingsFormProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -36,6 +60,29 @@ export function SettingsForm({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Usage totals
+  const usageTotals = usage.reduce(
+    (acc, u) => {
+      acc.calls += 1;
+      acc.input += u.input_tokens;
+      acc.output += u.output_tokens;
+      acc.byFeature[u.feature] = (acc.byFeature[u.feature] ?? 0) + 1;
+      return acc;
+    },
+    { calls: 0, input: 0, output: 0, byFeature: {} as Record<string, number> }
+  );
+  const featureEntries = Object.entries(usageTotals.byFeature).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const maxFeatureCount = featureEntries[0]?.[1] ?? 1;
+
+  // Today's calls for daily quota display
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  // usage prop is month-to-date, so we can't accurately split by day on the
+  // client without extra data. We just show monthly total and the daily cap.
+  const callsThisMonth = usageTotals.calls;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -72,32 +119,18 @@ export function SettingsForm({
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `${userId}/avatar-${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadErr) {
-        const msg = (uploadErr.message || "").toLowerCase();
-        if (msg.includes("bucket not found") || msg.includes("not found")) {
-          toast.error(
-            "Avatar storage isn't configured yet. Ask an admin to create the \"avatars\" bucket."
-          );
-          return;
-        }
-        throw uploadErr;
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error || "Failed to upload avatar");
+        return;
       }
-
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const publicUrl = data.publicUrl;
-
-      const { error: updateErr } = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", userId);
-      if (updateErr) throw updateErr;
-
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(json.avatar_url);
       toast.success("Avatar updated");
       router.refresh();
     } catch (err) {
@@ -241,6 +274,96 @@ export function SettingsForm({
             </Button>
           </div>
         </form>
+      </section>
+
+      {/* AI Assistant */}
+      <section>
+        <h2 className="mb-4 flex items-center gap-2 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5" />
+          AI Assistant
+        </h2>
+        <div className="space-y-4 rounded-xl border border-border p-5">
+          <div className="flex items-start gap-3">
+            {aiConfigured ? (
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-500" />
+            ) : (
+              <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
+            )}
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-foreground">
+                {aiConfigured
+                  ? "AI features enabled"
+                  : "AI features are currently unavailable"}
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {aiConfigured ? (
+                  <>
+                    Powered by open-source{" "}
+                    <span className="font-mono text-[11px]">{aiModel}</span> via
+                    Groq. No configuration needed — free and ready to use.
+                  </>
+                ) : (
+                  <>
+                    The server is missing <code>GROQ_API_KEY</code>. Contact the
+                    administrator.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {aiConfigured && (
+            <p className="rounded-md bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Daily limit:</strong> Up to{" "}
+              {DAILY_LIMIT} AI calls per user per day to keep the shared quota
+              fair. Resets at midnight UTC.
+            </p>
+          )}
+
+          {callsThisMonth > 0 && (
+            <div className="border-t border-border pt-4">
+              <p className="text-[12px] font-medium text-foreground">
+                This month's usage
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-3 text-[12px]">
+                <div>
+                  <p className="text-muted-foreground">AI calls</p>
+                  <p className="font-medium text-foreground">
+                    {callsThisMonth}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Tokens</p>
+                  <p className="font-medium text-foreground">
+                    {(usageTotals.input + usageTotals.output).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              {featureEntries.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {featureEntries.slice(0, 5).map(([feature, count]) => (
+                    <div key={feature} className="flex items-center gap-2">
+                      <span className="w-32 truncate text-[11px] text-muted-foreground">
+                        {feature}
+                      </span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full bg-foreground/60"
+                          style={{
+                            width: `${(count / maxFeatureCount) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-[11px] tabular-nums text-muted-foreground">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Appearance */}

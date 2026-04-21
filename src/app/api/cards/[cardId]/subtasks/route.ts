@@ -43,12 +43,17 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("subtasks")
     .select("position")
     .eq("card_id", cardId)
     .order("position", { ascending: false })
     .limit(1);
+
+  if (existingError) {
+    console.error('[cards/[cardId]/subtasks POST] max-position query failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
 
   const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0;
 
@@ -74,7 +79,14 @@ export async function PATCH(request: Request) {
   if (Array.isArray(body?.subtasks)) {
     const updates = body.subtasks as { id: string; position: number }[];
     for (const u of updates) {
-      await supabase.from("subtasks").update({ position: u.position }).eq("id", u.id);
+      const { error: reorderError } = await supabase
+        .from("subtasks")
+        .update({ position: u.position })
+        .eq("id", u.id);
+      if (reorderError) {
+        console.error('[cards/[cardId]/subtasks PATCH] reorder update failed:', reorderError);
+        return NextResponse.json({ error: reorderError.message }, { status: 500 });
+      }
     }
     return NextResponse.json({ success: true });
   }

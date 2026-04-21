@@ -71,12 +71,16 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("activity_log")
     .select("id, actor_id, action")
     .eq("id", commentId)
     .single();
 
+  if (existingError && existingError.code !== "PGRST116") {
+    console.error('[cards/[cardId]/comments/[commentId] DELETE] fetch failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

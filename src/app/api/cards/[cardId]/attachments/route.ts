@@ -1,7 +1,6 @@
-// NOTE: Requires a Supabase Storage bucket named "attachments" to exist.
-// Create it in the Supabase dashboard under Storage (private bucket).
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { ensureBucket } from "@/lib/supabase/storage-setup";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const BUCKET = "attachments";
@@ -59,6 +58,14 @@ export async function POST(
 
   if (file.size > MAX_FILE_SIZE) {
     return NextResponse.json({ error: "File exceeds 10 MB limit" }, { status: 400 });
+  }
+
+  const bucketResult = await ensureBucket("attachments");
+  if (!bucketResult.ok) {
+    return NextResponse.json(
+      { error: bucketResult.message },
+      { status: 503 }
+    );
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -126,12 +133,17 @@ export async function DELETE(
 
   const { id } = await request.json();
 
-  const { data: row } = await supabase
+  const { data: row, error: rowError } = await supabase
     .from("attachments")
     .select("storage_path")
     .eq("id", id)
     .eq("card_id", cardId)
-    .single();
+    .maybeSingle();
+
+  if (rowError) {
+    console.error('[cards/[cardId]/attachments DELETE] row lookup failed:', rowError);
+    return NextResponse.json({ error: rowError.message }, { status: 500 });
+  }
 
   if (row?.storage_path) {
     try {

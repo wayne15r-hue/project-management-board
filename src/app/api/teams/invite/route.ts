@@ -16,14 +16,18 @@ export async function POST(request: Request) {
   }
 
   // Check existing invite
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("invites")
     .select("id")
     .eq("team_id", parsed.data.teamId)
     .eq("email", parsed.data.email)
     .eq("status", "pending")
-    .single();
+    .maybeSingle();
 
+  if (existingError) {
+    console.error('[teams/invite POST] existing-invite query failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
   if (existing) {
     return NextResponse.json(
       { error: "Invite already sent to this email" },
@@ -32,19 +36,29 @@ export async function POST(request: Request) {
   }
 
   // Check if already a member
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id")
     .eq("email", parsed.data.email)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    console.error('[teams/invite POST] profile lookup failed:', profileError);
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
 
   if (profile) {
-    const { data: member } = await supabase
+    const { data: member, error: memberError } = await supabase
       .from("team_members")
       .select("id")
       .eq("team_id", parsed.data.teamId)
       .eq("user_id", profile.id)
-      .single();
+      .maybeSingle();
+
+    if (memberError) {
+      console.error('[teams/invite POST] member lookup failed:', memberError);
+      return NextResponse.json({ error: memberError.message }, { status: 500 });
+    }
 
     if (member) {
       return NextResponse.json(

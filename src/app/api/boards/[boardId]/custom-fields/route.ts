@@ -46,12 +46,17 @@ export async function POST(
   }
 
   // Get next position
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("custom_field_definitions")
     .select("position")
     .eq("board_id", boardId)
     .order("position", { ascending: false })
     .limit(1);
+
+  if (existingError) {
+    console.error('[boards/[boardId]/custom-fields POST] max-position query failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
 
   const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0;
 

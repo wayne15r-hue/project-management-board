@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shared/sidebar";
 import { MobileSidebarToggle } from "@/components/shared/mobile-sidebar-toggle";
+import { AICommandBar } from "@/components/ai/ai-command-bar";
 
 export default async function DashboardLayout({
   children,
@@ -41,6 +42,7 @@ export default async function DashboardLayout({
         <MobileSidebarToggle />
         {children}
       </main>
+      <AICommandBar />
     </div>
   );
 }

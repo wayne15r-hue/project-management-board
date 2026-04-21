@@ -20,12 +20,17 @@ export async function POST(
   }
 
   // Get max position
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("columns")
     .select("position")
     .eq("board_id", boardId)
     .order("position", { ascending: false })
     .limit(1);
+
+  if (existingError) {
+    console.error('[boards/[boardId]/columns POST] max-position query failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
 
   const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0;
 
@@ -70,7 +75,12 @@ export async function PATCH(
       .eq("board_id", boardId)
   );
 
-  await Promise.all(updates);
+  const results = await Promise.all(updates);
+  const firstErr = results.find((r) => r.error)?.error;
+  if (firstErr) {
+    console.error('[boards/[boardId]/columns PATCH] batch update failed:', firstErr);
+    return NextResponse.json({ error: firstErr.message }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }
 
@@ -88,10 +98,15 @@ export async function DELETE(
   }
 
   // Check that it's not the last column
-  const { data: columns } = await supabase
+  const { data: columns, error: columnsError } = await supabase
     .from("columns")
     .select("id")
     .eq("board_id", boardId);
+
+  if (columnsError) {
+    console.error('[boards/[boardId]/columns DELETE] columns query failed:', columnsError);
+    return NextResponse.json({ error: columnsError.message }, { status: 500 });
+  }
 
   if (columns && columns.length <= 1) {
     return NextResponse.json(

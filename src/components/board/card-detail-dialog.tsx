@@ -37,6 +37,8 @@ import { Subtasks } from "./subtasks";
 import { Attachments } from "./attachments";
 import { LabelPicker } from "./label-picker";
 import { Tag } from "lucide-react";
+import { AIWritingAssistant } from "@/components/ai/ai-writing-assistant";
+import { AISuggestions } from "@/components/ai/ai-suggestions";
 import type {
   Board,
   Card,
@@ -280,6 +282,29 @@ export function CardDetailDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto px-5 pb-8 pt-5 sm:px-10 sm:pb-10 sm:pt-6">
+          {card && (
+            <div className="mb-4">
+              <AISuggestions
+                cardId={card.id}
+                boardId={card.board_id}
+                title={title}
+                description={description}
+                currentPriority={priority}
+                currentLabels={cardLabels}
+                currentAssigneeId={assigneeId || null}
+                members={members}
+                onApplyPriority={(p) => {
+                  setPriority(p);
+                  performSave({ priority: p });
+                }}
+                onApplyAssignee={(id) => {
+                  setAssigneeId(id);
+                  performSave({ assignee_id: id });
+                }}
+                onApplyLabel={(l) => setCardLabels((prev) => [...prev, l])}
+              />
+            </div>
+          )}
           {/* Properties */}
           <div className="space-y-0.5">
             <PropertyRow icon={<CircleDot className="h-3.5 w-3.5" />} label="Status">
@@ -530,9 +555,19 @@ export function CardDetailDialog({
 
           {/* Description */}
           <div>
-            <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Description
-            </h3>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Description
+              </h3>
+              <AIWritingAssistant
+                title={title}
+                description={description}
+                onAccept={(text) => {
+                  setDescription(text);
+                  performSave({ description: text || null });
+                }}
+              />
+            </div>
             <AutoTextarea
               value={description}
               onChange={setDescription}

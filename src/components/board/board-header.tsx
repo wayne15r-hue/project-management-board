@@ -25,8 +25,12 @@ import {
   Upload,
   FileJson,
   FileSpreadsheet,
+  Sparkles,
+  FileText,
 } from "lucide-react";
 import { ImportCardsDialog } from "./import-cards-dialog";
+import { BoardSummaryDialog } from "@/components/ai/board-summary-dialog";
+import { ImportNotesDialog } from "@/components/ai/import-notes-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ViewControls } from "./view-controls";
@@ -57,6 +61,8 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
   const [importOpen, setImportOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   function handleExport(kind: "csv" | "json") {
     const url = `/api/boards/${board.id}/export?format=${kind}`;
@@ -69,16 +75,33 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   }
 
   async function handleSetTheme(theme: BoardBackground) {
+    const previous = board.background_theme ?? "default";
+    // Optimistic: reflect the change immediately in the rendered board object
+    // so the background flips before the server round-trip.
+    (board as { background_theme: BoardBackground }).background_theme = theme;
     try {
       const res = await fetch(`/api/boards/${board.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ background_theme: theme }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const message =
+          typeof body?.error === "string"
+            ? body.error
+            : Array.isArray(body?.error)
+              ? body.error.map((i: { message?: string }) => i?.message).filter(Boolean).join(", ")
+              : `HTTP ${res.status}`;
+        throw new Error(message);
+      }
       router.refresh();
-    } catch {
-      toast.error("Failed to update background");
+    } catch (err) {
+      (board as { background_theme: BoardBackground }).background_theme = previous;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Failed to update background:", message);
+      toast.error(`Couldn't update background: ${message}`);
+      router.refresh();
     }
   }
 
@@ -242,6 +265,14 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
                 <Upload className="mr-2 h-4 w-4" />
                 Import from CSV
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSummaryOpen(true)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                AI Summary
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setNotesOpen(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Import from Notes
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Board
@@ -283,6 +314,19 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={() => router.refresh()}
+      />
+      <BoardSummaryDialog
+        boardId={board.id}
+        boardName={board.name}
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+      />
+      <ImportNotesDialog
+        board={board}
+        members={members}
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+        onCreated={() => router.refresh()}
       />
     </div>
   );

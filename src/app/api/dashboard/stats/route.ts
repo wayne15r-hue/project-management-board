@@ -16,6 +16,19 @@ export async function GET() {
     supabase.from("team_members").select("user_id"),
   ]);
 
+  if (boardsRes.error) {
+    console.error('[dashboard/stats GET] boards count failed:', boardsRes.error);
+    return NextResponse.json({ error: boardsRes.error.message }, { status: 500 });
+  }
+  if (cardsRes.error) {
+    console.error('[dashboard/stats GET] cards query failed:', cardsRes.error);
+    return NextResponse.json({ error: cardsRes.error.message }, { status: 500 });
+  }
+  if (membersRes.error) {
+    console.error('[dashboard/stats GET] team members query failed:', membersRes.error);
+    return NextResponse.json({ error: membersRes.error.message }, { status: 500 });
+  }
+
   const totalBoards = boardsRes.count ?? 0;
   const totalCards = cardsRes.count ?? 0;
 

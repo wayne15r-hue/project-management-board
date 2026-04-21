@@ -54,11 +54,16 @@ export async function PATCH(
   if (parsed.data.cover_color !== undefined) updateData.cover_color = parsed.data.cover_color;
 
   // Fetch existing card for change tracking
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("cards")
     .select("*, assignee:profiles!cards_assignee_id_fkey(full_name)")
     .eq("id", cardId)
     .single();
+
+  if (existingError) {
+    console.error('[cards/[cardId] PATCH] existing card fetch failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: existingError.code === "PGRST116" ? 404 : 500 });
+  }
 
   const { data, error } = await supabase
     .from("cards")

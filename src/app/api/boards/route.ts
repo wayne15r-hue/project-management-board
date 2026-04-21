@@ -45,7 +45,11 @@ export async function POST(request: Request) {
     { board_id: board.id, name: "Done", position: 2, color: "#22c55e" },
   ];
 
-  await supabase.from("columns").insert(defaultColumns);
+  const { error: columnsError } = await supabase.from("columns").insert(defaultColumns);
+  if (columnsError) {
+    console.error('[boards POST] default columns insert failed:', columnsError);
+    return NextResponse.json({ error: columnsError.message }, { status: 500 });
+  }
 
   return NextResponse.json(board, { status: 201 });
 }

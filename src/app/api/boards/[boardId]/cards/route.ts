@@ -20,12 +20,17 @@ export async function POST(
   }
 
   // Get max position in column
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("cards")
     .select("position")
     .eq("column_id", parsed.data.columnId)
     .order("position", { ascending: false })
     .limit(1);
+
+  if (existingError) {
+    console.error('[boards/[boardId]/cards POST] max-position query failed:', existingError);
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
 
   const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0;
 

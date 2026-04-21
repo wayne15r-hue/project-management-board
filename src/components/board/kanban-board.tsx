@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { KanbanColumn } from "./kanban-column";
 import { KanbanCard } from "./kanban-card";
 import { CardDetailDialog } from "./card-detail-dialog";
+import { AICreateBar } from "@/components/ai/ai-create-bar";
 import { useBoardStore } from "@/stores/board-store";
 import { useAppStore } from "@/stores/app-store";
 import { isViewActive } from "@/lib/board-filters";
@@ -293,6 +294,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
 
   return (
     <>
+      <AICreateBar board={board} members={members} onCreated={onRefresh} />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
