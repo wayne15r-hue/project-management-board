@@ -39,6 +39,7 @@ export default async function SettingsPage() {
         email={user.email || ""}
         initialName={profile?.full_name || ""}
         initialAvatarUrl={profile?.avatar_url || null}
+        initialEmailNotifications={profile?.email_notifications ?? true}
         aiConfigured={Boolean(process.env.GROQ_API_KEY) && process.env.AI_ENABLED !== "false"}
         aiModel={process.env.AI_MODEL || "llama-3.3-70b-versatile"}
         usage={usage ?? []}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { updateCardSchema } from "@/lib/validators/card";
 import { logActivity } from "@/lib/activity";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(
   _request: Request,
@@ -116,36 +117,23 @@ export async function PATCH(
     }
   }
 
-  // Send notification email if assignee changed (don't email yourself)
+  // Assignment notification (in-app + email) if assignee changed
   if (
     parsed.data.assignee_id &&
     existing &&
     parsed.data.assignee_id !== existing.assignee_id &&
-    data.assignee?.email &&
-    parsed.data.assignee_id !== user?.id
+    user &&
+    parsed.data.assignee_id !== user.id
   ) {
-    // Fire-and-forget: don't block the response
-    import("@/lib/email").then(async ({ sendCardAssignedEmail }) => {
-      try {
-        const { data: board } = await supabase
-          .from("boards")
-          .select("name")
-          .eq("id", data.board_id)
-          .single();
-
-        await sendCardAssignedEmail({
-          to: data.assignee!.email,
-          assigneeName: data.assignee!.full_name || "",
-          cardTitle: data.title,
-          boardName: board?.name || "Board",
-          boardId: data.board_id,
-          priority: data.priority,
-          dueDate: data.due_date,
-        });
-      } catch (emailErr) {
-        console.error("Failed to send assignment email:", emailErr);
-      }
-    });
+    createNotification({
+      recipientId: parsed.data.assignee_id,
+      actorId: user.id,
+      type: "assignment",
+      cardId: data.id,
+      boardId: data.board_id,
+      title: `You were assigned to "${data.title}"`,
+      email: { kind: "assignment", cardTitle: data.title },
+    }).catch((e) => console.error("assignment notification failed:", e));
   }
 
   // Handle recurring task: when moved to the last column, create a new card in the first column

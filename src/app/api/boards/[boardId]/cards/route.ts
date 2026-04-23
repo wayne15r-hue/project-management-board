@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createCardSchema } from "@/lib/validators/card";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(
   request: Request,
@@ -57,5 +58,18 @@ export async function POST(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (data.assignee_id && data.assignee_id !== user.id) {
+    createNotification({
+      recipientId: data.assignee_id,
+      actorId: user.id,
+      type: "assignment",
+      cardId: data.id,
+      boardId: data.board_id,
+      title: `You were assigned to "${data.title}"`,
+      email: { kind: "assignment", cardTitle: data.title },
+    }).catch((e) => console.error("assignment notification failed:", e));
+  }
+
   return NextResponse.json(data, { status: 201 });
 }

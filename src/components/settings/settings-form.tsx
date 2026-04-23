@@ -32,6 +32,7 @@ interface SettingsFormProps {
   email: string;
   initialName: string;
   initialAvatarUrl: string | null;
+  initialEmailNotifications?: boolean;
   aiConfigured?: boolean;
   aiModel?: string;
   usage?: UsageRow[];
@@ -46,6 +47,7 @@ export function SettingsForm({
   email,
   initialName,
   initialAvatarUrl,
+  initialEmailNotifications = true,
   aiConfigured = false,
   aiModel = "llama-3.3-70b-versatile",
   usage = [],
@@ -56,6 +58,10 @@ export function SettingsForm({
 
   const [name, setName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [emailNotifications, setEmailNotifications] = useState(
+    initialEmailNotifications
+  );
+  const [savingNotif, setSavingNotif] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -363,6 +369,66 @@ export function SettingsForm({
               )}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Notifications */}
+      <section>
+        <h2 className="mb-4 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Notifications
+        </h2>
+        <div className="rounded-xl border border-border p-5">
+          <label className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-foreground">
+                Email notifications
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                Receive emails when you&apos;re assigned to a card or mentioned
+                in a comment. In-app notifications are always shown.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={emailNotifications}
+              disabled={savingNotif}
+              onClick={async () => {
+                const next = !emailNotifications;
+                setEmailNotifications(next);
+                setSavingNotif(true);
+                try {
+                  const { error } = await supabase
+                    .from("profiles")
+                    .update({ email_notifications: next })
+                    .eq("id", userId);
+                  if (error) throw error;
+                  toast.success(
+                    next
+                      ? "Email notifications enabled"
+                      : "Email notifications disabled"
+                  );
+                } catch {
+                  setEmailNotifications(!next);
+                  toast.error("Failed to update preference");
+                } finally {
+                  setSavingNotif(false);
+                }
+              }}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                emailNotifications ? "bg-primary" : "bg-muted",
+                savingNotif && "opacity-60"
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform",
+                  emailNotifications ? "translate-x-4" : "translate-x-0.5"
+                )}
+              />
+            </button>
+          </label>
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shared/sidebar";
 import { MobileSidebarToggle } from "@/components/shared/mobile-sidebar-toggle";
 import { AICommandBar } from "@/components/ai/ai-command-bar";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export default async function DashboardLayout({
   children,
@@ -40,6 +41,9 @@ export default async function DashboardLayout({
       />
       <main className="relative flex min-w-0 flex-1 flex-col overflow-auto">
         <MobileSidebarToggle />
+        <div className="fixed right-3 top-3 z-30">
+          <NotificationBell userId={user.id} />
+        </div>
         {children}
       </main>
       <AICommandBar />

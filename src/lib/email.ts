@@ -12,6 +12,15 @@ function getResend(): Resend {
 const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const FROM = "ProjectBoard <onboarding@resend.dev>";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // ─── Shared layout ──────────────────────────────────────────────────────────
 
 function layout(body: string): string {
@@ -165,6 +174,67 @@ export async function sendCommentNotificationEmail(params: {
     from: FROM,
     to: params.to,
     subject: `${params.commenterName} commented on "${params.cardTitle}"`,
+    html,
+  });
+}
+
+export async function sendAssignmentNotificationEmail(params: {
+  to: string;
+  recipientName: string;
+  actorName: string;
+  cardTitle: string;
+  boardId: string;
+  cardId: string;
+}) {
+  const resend = getResend();
+  const cardUrl = `${APP_URL()}/dashboard/board/${params.boardId}?card=${params.cardId}`;
+  const html = layout(`
+    <h2 style="margin:0 0 8px;font-size:20px;color:#37352F;">${escapeHtml(params.actorName)} assigned you a card</h2>
+    <p style="margin:0 0 20px;color:#787774;font-size:14px;">Hi ${escapeHtml(params.recipientName) || "there"},</p>
+    <div style="background:#F7F6F3;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+      <p style="margin:0;font-size:16px;font-weight:600;color:#37352F;">${escapeHtml(params.cardTitle)}</p>
+    </div>
+    <p>${button("Open Card", cardUrl)}</p>
+    <p style="margin-top:24px;color:#787774;font-size:12px;">You received this because someone assigned a card to you. You can disable email notifications in Settings.</p>
+  `);
+
+  await resend.emails.send({
+    from: FROM,
+    to: params.to,
+    subject: `${params.actorName} assigned you "${params.cardTitle}"`,
+    html,
+  });
+}
+
+export async function sendMentionNotificationEmail(params: {
+  to: string;
+  recipientName: string;
+  actorName: string;
+  cardTitle: string;
+  commentText: string;
+  boardId: string;
+  cardId: string;
+}) {
+  const resend = getResend();
+  const cardUrl = `${APP_URL()}/dashboard/board/${params.boardId}?card=${params.cardId}`;
+  const truncated =
+    params.commentText.length > 300
+      ? params.commentText.slice(0, 300) + "..."
+      : params.commentText;
+  const html = layout(`
+    <h2 style="margin:0 0 8px;font-size:20px;color:#37352F;">${escapeHtml(params.actorName)} mentioned you</h2>
+    <p style="margin:0 0 20px;color:#787774;font-size:14px;">Hi ${escapeHtml(params.recipientName) || "there"}, you were mentioned in a comment on <strong>${escapeHtml(params.cardTitle)}</strong>.</p>
+    <div style="background:#F7F6F3;border-radius:8px;padding:16px 20px;margin-bottom:20px;border-left:3px solid #6366f1;">
+      <p style="margin:0;font-size:14px;color:#55544F;line-height:1.5;">${escapeHtml(truncated)}</p>
+    </div>
+    <p>${button("View Comment", cardUrl)}</p>
+    <p style="margin-top:24px;color:#787774;font-size:12px;">You received this because someone @mentioned you. You can disable email notifications in Settings.</p>
+  `);
+
+  await resend.emails.send({
+    from: FROM,
+    to: params.to,
+    subject: `${params.actorName} mentioned you in "${params.cardTitle}"`,
     html,
   });
 }
