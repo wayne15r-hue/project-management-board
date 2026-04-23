@@ -30,10 +30,45 @@ export async function GET(
   if (before) query = query.lt("created_at", before);
 
   const { data, error } = await query;
-  if (error)
+  if (error) {
+    console.error('[conversations/[conversationId]/messages GET] query failed:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  return NextResponse.json((data ?? []).reverse());
+  const messages = (data ?? []).reverse();
+  const ids = messages.map((m) => m.id);
+  if (ids.length === 0) return NextResponse.json(messages);
+
+  const { data: reactions, error: rxError } = await supabase
+    .from("message_reactions")
+    .select("message_id, user_id, emoji")
+    .in("message_id", ids);
+  if (rxError) {
+    console.error('[conversations/[conversationId]/messages GET] reactions query failed:', rxError);
+    return NextResponse.json({ error: rxError.message }, { status: 500 });
+  }
+
+  const rxMap = new Map<string, Map<string, Set<string>>>();
+  for (const r of reactions ?? []) {
+    const perMsg = rxMap.get(r.message_id) ?? new Map<string, Set<string>>();
+    const users = perMsg.get(r.emoji) ?? new Set<string>();
+    users.add(r.user_id);
+    perMsg.set(r.emoji, users);
+    rxMap.set(r.message_id, perMsg);
+  }
+  const withRx = messages.map((m) => {
+    const perMsg = rxMap.get(m.id);
+    const rx = perMsg
+      ? Array.from(perMsg.entries()).map(([emoji, users]) => ({
+          emoji,
+          count: users.size,
+          user_ids: Array.from(users),
+        }))
+      : [];
+    return { ...m, reactions: rx };
+  });
+
+  return NextResponse.json(withRx);
 }
 
 // POST /api/conversations/[id]/messages

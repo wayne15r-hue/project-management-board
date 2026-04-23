@@ -3,7 +3,6 @@ import { BoardList } from "@/components/board/board-list";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { QuickActions } from "@/components/dashboard/quick-actions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -80,12 +79,9 @@ export default async function DashboardPage() {
 
       <div className="mb-6 grid gap-5 lg:grid-cols-[1fr_320px]">
         <div>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-[15px] font-semibold text-foreground">
-              Your boards
-            </h2>
-            <QuickActions />
-          </div>
+          <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+            Your boards
+          </h2>
           <BoardList
             boards={boards || []}
             userId={user!.id}

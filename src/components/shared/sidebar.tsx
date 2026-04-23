@@ -21,7 +21,6 @@ import {
 import {
   Plus,
   LogOut,
-  Users,
   MessageSquare,
   LayoutGrid,
   Settings,
@@ -36,6 +35,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useTheme } from "@/components/shared/theme-provider";
+import { ChatNavBadge } from "@/components/chat/chat-nav-badge";
 import type { Board } from "@/types";
 
 interface SidebarProps {
@@ -182,18 +182,12 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarP
               collapsed={collapsed}
             />
             <SidebarLink
-              href="/dashboard/teams"
-              active={pathname === "/dashboard/teams"}
-              icon={<Users className="h-4 w-4" />}
-              label="Teams"
-              collapsed={collapsed}
-            />
-            <SidebarLink
               href="/dashboard/chat"
               active={pathname.startsWith("/dashboard/chat")}
               icon={<MessageSquare className="h-4 w-4" />}
               label="Chat"
               collapsed={collapsed}
+              badge={<ChatNavBadge collapsed={collapsed} />}
             />
           </div>
 
@@ -440,12 +434,14 @@ function SidebarLink({
   icon,
   label,
   collapsed,
+  badge,
 }: {
   href: string;
   active: boolean;
   icon: React.ReactNode;
   label: string;
   collapsed: boolean;
+  badge?: React.ReactNode;
 }) {
   if (collapsed) {
     return (
@@ -456,12 +452,15 @@ function SidebarLink({
               href={href}
               aria-label={label}
               className={cn(
-                "flex h-8 w-full items-center justify-center rounded-md transition-colors",
+                "relative flex h-8 w-full items-center justify-center rounded-md transition-colors",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
               )}
-            />
+            >
+              {icon}
+              {badge}
+            </Link>
           }
         >
           {icon}
@@ -481,7 +480,8 @@ function SidebarLink({
       )}
     >
       <span className="text-muted-foreground">{icon}</span>
-      <span className="truncate">{label}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {badge}
     </Link>
   );
 }

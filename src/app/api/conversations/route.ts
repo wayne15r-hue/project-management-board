@@ -23,7 +23,7 @@ export async function GET() {
   const ids = (memberships ?? []).map((m) => m.conversation_id);
   if (ids.length === 0) return NextResponse.json([]);
 
-  const [convRes, membersRes, lastMsgRes] = await Promise.all([
+  const [convRes, membersRes, lastMsgRes, unreadRes] = await Promise.all([
     supabase
       .from("conversations")
       .select("*")
@@ -40,6 +40,12 @@ export async function GET() {
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(200),
+    supabase
+      .from("messages")
+      .select("conversation_id, sender_id, created_at")
+      .in("conversation_id", ids)
+      .is("deleted_at", null)
+      .neq("sender_id", user.id),
   ]);
 
   if (convRes.error) {
@@ -53,6 +59,10 @@ export async function GET() {
   if (lastMsgRes.error) {
     console.error('[conversations GET] last messages query failed:', lastMsgRes.error);
     return NextResponse.json({ error: lastMsgRes.error.message }, { status: 500 });
+  }
+  if (unreadRes.error) {
+    console.error('[conversations GET] unread query failed:', unreadRes.error);
+    return NextResponse.json({ error: unreadRes.error.message }, { status: 500 });
   }
 
   const conversations = convRes.data;
@@ -84,14 +94,20 @@ export async function GET() {
     }
   }
 
+  const unreadByConv = new Map<string, number>();
+  for (const row of unreadRes.data ?? []) {
+    const lastRead = lastReadMap.get(row.conversation_id);
+    if (lastRead && new Date(row.created_at) <= new Date(lastRead)) continue;
+    unreadByConv.set(
+      row.conversation_id,
+      (unreadByConv.get(row.conversation_id) ?? 0) + 1
+    );
+  }
+
   const result = (conversations ?? []).map((c) => {
     const members = membersByConv.get(c.id) ?? [];
     const last = lastMsgByConv.get(c.id) ?? null;
-    const lastRead = lastReadMap.get(c.id);
-    const unreadCount =
-      last && lastRead && new Date(last.created_at) > new Date(lastRead) && last.sender_id !== user.id
-        ? 1
-        : 0;
+    const unreadCount = unreadByConv.get(c.id) ?? 0;
     return {
       ...c,
       members,

@@ -49,4 +49,11 @@ export interface Message {
   deleted_at?: string | null;
   created_at: string;
   sender?: ChatProfile | null;
+  reactions?: MessageReaction[];
+}
+
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  user_ids: string[];
 }
