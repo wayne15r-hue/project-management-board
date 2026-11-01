@@ -6,8 +6,8 @@ import { Send, Paperclip, X, FileIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  onSend: (content: string) => Promise<void> | void;
-  onUpload: (file: File) => Promise<void>;
+  onSend: (content: string) => Promise<boolean>;
+  onUpload: (file: File) => Promise<boolean>;
   onTyping?: () => void;
   pendingFile: File | null;
   setPendingFile: (f: File | null) => void;
@@ -64,7 +64,7 @@ export function MessageInput({
     if (trimmed) {
       setSending(true);
       try {
-        await onSend(trimmed);
+        if (!await onSend(trimmed)) return;
         setValue("");
         requestAnimationFrame(resize);
       } finally {
@@ -75,8 +75,7 @@ export function MessageInput({
     if (pendingFile) {
       setUploading(true);
       try {
-        await onUpload(pendingFile);
-        cancelFile();
+        if (await onUpload(pendingFile)) cancelFile();
       } finally {
         setUploading(false);
       }
@@ -120,7 +119,7 @@ export function MessageInput({
           <button
             type="button"
             onClick={cancelFile}
-            disabled={uploading}
+            disabled={sending || uploading}
             aria-label="Remove attachment"
             className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
           >
@@ -136,7 +135,7 @@ export function MessageInput({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={uploading}
+          disabled={sending || uploading}
           aria-label="Attach file"
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
@@ -150,6 +149,7 @@ export function MessageInput({
         />
         <textarea
           ref={textareaRef}
+          disabled={sending || uploading}
           value={value}
           onChange={(e) => {
             setValue(e.target.value);

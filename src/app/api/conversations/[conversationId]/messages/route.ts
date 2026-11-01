@@ -22,8 +22,12 @@ export async function GET(
   }
   let cursor: ReturnType<typeof parseMessageCursor>;
   let limit: number;
+  const forward = url.searchParams.has("after") || url.searchParams.has("after_id");
   try {
-    cursor = parseMessageCursor(url.searchParams.get("before"), url.searchParams.get("before_id"));
+    if (forward && (url.searchParams.has("before") || url.searchParams.has("before_id") || messageId || !url.searchParams.get("after_id"))) throw new Error("Ambiguous cursor");
+    cursor = forward
+      ? parseMessageCursor(url.searchParams.get("after"), url.searchParams.get("after_id"))
+      : parseMessageCursor(url.searchParams.get("before"), url.searchParams.get("before_id"));
     limit = messagePageLimit(url.searchParams.get("limit"));
   } catch {
     return NextResponse.json({ error: "Invalid message pagination" }, { status: 400 });
@@ -39,12 +43,13 @@ export async function GET(
     )
     .eq("conversation_id", conversationId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
+    .order("created_at", { ascending: forward })
+    .order("id", { ascending: forward })
     .limit(limit);
   if (messageId) query = query.eq("id", messageId);
   if (cursor?.beforeId) {
-    query = query.or(`created_at.lt.${cursor.before},and(created_at.eq.${cursor.before},id.lt.${cursor.beforeId})`);
+    const comparison = forward ? "gt" : "lt";
+    query = query.or(`created_at.${comparison}.${cursor.before},and(created_at.eq.${cursor.before},id.${comparison}.${cursor.beforeId})`);
   } else if (cursor) query = query.lt("created_at", cursor.before);
 
   const { data, error } = await query;
@@ -53,7 +58,7 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const messages = (data ?? []).reverse();
+  const messages = forward ? (data ?? []) : (data ?? []).reverse();
   const ids = messages.map((m) => m.id);
   if (ids.length === 0) return NextResponse.json(messages);
 
