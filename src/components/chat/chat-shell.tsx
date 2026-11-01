@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { ConversationList } from "./conversation-list";
@@ -19,17 +19,24 @@ export function ChatShell({ currentUser }: Props) {
   const [loading, setLoading] = useState(true);
   const [newOpen, setNewOpen] = useState(false);
 
-  const loadConversations = useCallback(async () => {
-    const res = await fetch("/api/conversations");
-    if (!res.ok) return;
-    const data: Conversation[] = await res.json();
-    setConversations(data);
-    setLoading(false);
-    if (!activeId && data.length > 0) setActiveId(data[0].id);
-  }, [activeId]);
-
+  const latestRequest = useRef({ id: 0 });
+  const loadConversations = useCallback(() => {
+    const request = ++latestRequest.current.id;
+    return fetch("/api/conversations").then(async (response) => {
+      if (!response.ok) throw new Error("Couldn't load conversations.");
+      const data: Conversation[] = await response.json();
+      if (request !== latestRequest.current.id) return;
+      setConversations(data);
+      setLoading(false);
+      setActiveId((current) => current ?? data[0]?.id ?? null);
+    }).catch(() => {
+      if (request === latestRequest.current.id) { setLoading(false); toast.error("Couldn't load conversations."); }
+    });
+  }, []);
   useEffect(() => {
-    loadConversations();
+    const requests = latestRequest.current;
+    void loadConversations();
+    return () => { requests.id++; };
   }, [loadConversations]);
 
   // Refresh list on new messages AND when the user is added to a new conversation

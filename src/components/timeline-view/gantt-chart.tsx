@@ -13,8 +13,6 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PriorityBadge } from "@/components/shared/priority-badge";
-import { ZoomIn, ZoomOut } from "lucide-react";
 import type { BoardWithDetails, Card, Priority } from "@/types";
 
 interface GanttChartProps {
@@ -37,7 +35,7 @@ export function GanttChart({ board }: GanttChartProps) {
     [board.columns]
   );
 
-  const { timelineStart, timelineEnd, days } = useMemo(() => {
+  const { timelineStart, days } = useMemo(() => {
     if (allCards.length === 0) {
       const today = startOfDay(new Date());
       return {

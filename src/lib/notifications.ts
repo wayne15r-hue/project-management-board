@@ -38,6 +38,19 @@ export async function createNotification(
   try {
     const supabase = createAdminClient();
 
+    // Service-role writes bypass RLS: check both identities and the card/board
+    // relationship before emitting any private content, including email.
+    const { data: allowed, error: accessError } = await supabase.rpc(
+      "notification_recipient_allowed",
+      {
+        p_card_id: input.cardId,
+        p_board_id: input.boardId,
+        p_actor_id: input.actorId,
+        p_recipient_id: input.recipientId,
+      }
+    );
+    if (accessError || allowed !== true) return;
+
     const { error: insertError } = await supabase.from("notifications").insert({
       recipient_id: input.recipientId,
       actor_id: input.actorId,
@@ -51,6 +64,7 @@ export async function createNotification(
 
     if (insertError) {
       console.error("[notifications] insert failed:", insertError);
+      return;
     }
 
     if (!input.email) return;

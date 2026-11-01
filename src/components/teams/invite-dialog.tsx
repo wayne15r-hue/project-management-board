@@ -24,6 +24,7 @@ export function InviteDialog({ teamId, teamName }: InviteDialogProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [invitationLink, setInvitationLink] = useState<string | null>(null);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +43,14 @@ export function InviteDialog({ teamId, teamName }: InviteDialogProps) {
         throw new Error(data.error || "Failed to send invite");
       }
 
+      const data = await res.json();
+      if (data.email_sent === false) {
+        setInvitationLink(`${window.location.origin}/invite/${encodeURIComponent(data.token)}`);
+        toast.error(data.delivery_error || "Invitation created, but email was not delivered. Copy the link below.");
+        return;
+      }
       toast.success(`Invite sent to ${email}`);
+      setInvitationLink(null);
       setEmail("");
       setOpen(false);
     } catch (err) {
@@ -64,6 +72,16 @@ export function InviteDialog({ teamId, teamName }: InviteDialogProps) {
             <DialogTitle>Invite to {teamName}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
+            {invitationLink && (
+              <div className="space-y-2" role="status">
+                <p className="text-sm">The invitation is ready, but email delivery failed. Share this link with the invited person.</p>
+                <Input aria-label="Invitation link" value={invitationLink} readOnly onFocus={(event) => event.currentTarget.select()} />
+                <Button type="button" variant="outline" onClick={async () => {
+                  try { await navigator.clipboard.writeText(invitationLink); toast.success("Invitation link copied"); }
+                  catch { toast.error("Select and copy the invitation link above."); }
+                }}>Copy link</Button>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="invite-email">Email address</Label>
               <Input
@@ -77,7 +95,7 @@ export function InviteDialog({ teamId, teamName }: InviteDialogProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !!invitationLink}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send Invite
             </Button>

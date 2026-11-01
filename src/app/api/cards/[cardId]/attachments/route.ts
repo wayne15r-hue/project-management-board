@@ -130,6 +130,8 @@ export async function DELETE(
 ) {
   const { cardId } = await params;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await request.json();
 
@@ -145,15 +147,18 @@ export async function DELETE(
     return NextResponse.json({ error: rowError.message }, { status: 500 });
   }
 
-  if (row?.storage_path) {
+  if (!row) return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
+
+  if (row.storage_path) {
     try {
-      await supabase.storage.from(BUCKET).remove([row.storage_path]);
+      const { error: storageError } = await supabase.storage.from(BUCKET).remove([row.storage_path]);
+      if (storageError) return NextResponse.json({ error: "Could not remove attachment file" }, { status: 502 });
     } catch {
-      // ignore — bucket may not exist; still remove DB row
+      return NextResponse.json({ error: "Could not remove attachment file" }, { status: 502 });
     }
   }
 
-  const { error } = await supabase.from("attachments").delete().eq("id", id);
+  const { error } = await supabase.from("attachments").delete().eq("id", id).eq("card_id", cardId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

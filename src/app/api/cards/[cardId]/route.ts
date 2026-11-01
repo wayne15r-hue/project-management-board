@@ -46,8 +46,6 @@ export async function PATCH(
   if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
   if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
   if (parsed.data.priority !== undefined) updateData.priority = parsed.data.priority;
-  if (parsed.data.column_id !== undefined) updateData.column_id = parsed.data.column_id;
-  if (parsed.data.position !== undefined) updateData.position = parsed.data.position;
   if (parsed.data.due_date !== undefined) updateData.due_date = parsed.data.due_date;
   if (parsed.data.start_date !== undefined) updateData.start_date = parsed.data.start_date;
   if (parsed.data.assignee_id !== undefined) updateData.assignee_id = parsed.data.assignee_id;
@@ -66,16 +64,30 @@ export async function PATCH(
     return NextResponse.json({ error: existingError.message }, { status: existingError.code === "PGRST116" ? 404 : 500 });
   }
 
-  const { data, error } = await supabase
-    .from("cards")
-    .update(updateData)
-    .eq("id", cardId)
+  const isMove = parsed.data.column_id !== undefined || parsed.data.position !== undefined;
+  if (isMove) {
+    const metadata = { ...updateData };
+    delete metadata.updated_at;
+    const { error: moveError } = await supabase.rpc("move_card", {
+      p_card_id: cardId,
+      p_column_id: parsed.data.column_id ?? existing.column_id,
+      p_position: parsed.data.position ?? (parsed.data.column_id !== existing.column_id ? 2147483647 : existing.position),
+      p_updates: metadata,
+    });
+    if (moveError) return NextResponse.json({ error: moveError.message }, {
+      status: moveError.code === "42501" ? 403 : moveError.code?.startsWith("22") ? 400 : 500,
+    });
+  }
+
+  // Move RPC already writes updated_at. Avoid a separate write for move-only requests.
+  const cardQuery = !isMove && Object.keys(updateData).length > 1
+    ? supabase.from("cards").update(updateData)
+    : supabase.from("cards");
+  const { data, error } = await cardQuery
     .select(
-      `
-      *,
-      assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email)
-    `
+      `*, assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email)`
     )
+    .eq("id", cardId)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -113,7 +125,7 @@ export async function PATCH(
         : "updated";
 
     if (Object.keys(changes).length > 0) {
-      logActivity({ cardId, actorId: user.id, action, changes });
+      await logActivity({ cardId, actorId: user.id, action, changes });
     }
   }
 
@@ -125,7 +137,7 @@ export async function PATCH(
     user &&
     parsed.data.assignee_id !== user.id
   ) {
-    createNotification({
+    await createNotification({
       recipientId: parsed.data.assignee_id,
       actorId: user.id,
       type: "assignment",
@@ -143,8 +155,8 @@ export async function PATCH(
     parsed.data.column_id !== existing.column_id &&
     data.recurrence_rule
   ) {
-    // Fire-and-forget to avoid blocking the response
-    (async () => {
+    // Await persistence before finishing the request in serverless environments.
+    await (async () => {
       try {
         // Get all columns for this board, ordered by position
         const { data: columns } = await supabase

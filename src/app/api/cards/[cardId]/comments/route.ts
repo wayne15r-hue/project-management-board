@@ -47,7 +47,7 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  notifyCommentRecipients({
+  await notifyCommentRecipients({
     cardId,
     actorId: user.id,
     commentText: parsed.data.text,

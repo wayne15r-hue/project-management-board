@@ -49,7 +49,6 @@ export function Attachments({ cardId }: AttachmentsProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(`/api/cards/${cardId}/attachments`)
       .then((r) => r.json())
       .then((data) => {
@@ -101,11 +100,12 @@ export function Attachments({ cardId }: AttachmentsProps) {
     const prev = items;
     setItems((p) => p.filter((x) => x.id !== id));
     try {
-      await fetch(`/api/cards/${cardId}/attachments`, {
+      const response = await fetch(`/api/cards/${cardId}/attachments`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
+      if (!response.ok) throw new Error("Could not delete attachment");
     } catch {
       setItems(prev);
       toast.error("Failed to delete attachment");

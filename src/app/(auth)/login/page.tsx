@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FloatingInput } from "@/components/auth/floating-input";
 import { Loader2 } from "lucide-react";
+import { internalRedirect } from "../redirect";
 
 export default function LoginPage() {
+  return <Suspense><LoginForm /></Suspense>;
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const authError = searchParams.get("error") === "auth";
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,7 +39,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(internalRedirect(searchParams.get("next")));
     router.refresh();
   }
 
@@ -42,7 +49,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/callback?next=/dashboard`,
+        redirectTo: `${window.location.origin}/callback?next=${encodeURIComponent(internalRedirect(searchParams.get("next")))}`,
       },
     });
     if (error) {
@@ -62,6 +69,7 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {authError && <p role="alert" className="text-destructive">Your sign-in or recovery link expired or could not be verified. Please try again.</p>}
       {error && (
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
           {error}
@@ -88,7 +96,7 @@ export default function LoginPage() {
 
         <div className="flex justify-end">
           <Link
-            href="/login"
+            href="/reset-password"
             className="text-[12px] font-medium text-muted-foreground hover:text-foreground hover:underline"
           >
             Forgot password?

@@ -83,12 +83,6 @@ create or replace function public.user_has_board_access(board_uuid uuid)
 returns boolean as $$
   select exists (
     select 1 from public.boards where id = board_uuid and owner_id = auth.uid()
-    union
-    select 1
-      from public.board_teams bt
-      join public.team_members tm on tm.team_id = bt.team_id
-     where bt.board_id = board_uuid
-       and tm.user_id = auth.uid()
   );
 $$ language sql security definer stable;
 

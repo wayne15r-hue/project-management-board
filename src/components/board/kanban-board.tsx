@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,38 +16,44 @@ import {
 import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { createClient } from "@/lib/supabase/client";
+import { moveBoardCard, persistBoardMove } from "@/lib/board-move";
 import { KanbanColumn } from "./kanban-column";
 import { KanbanCard } from "./kanban-card";
 import { CardDetailDialog } from "./card-detail-dialog";
 import { AICreateBar } from "@/components/ai/ai-create-bar";
 import { useBoardStore } from "@/stores/board-store";
 import { useAppStore } from "@/stores/app-store";
-import { isViewActive } from "@/lib/board-filters";
+import { applyViewToColumns, isViewActive } from "@/lib/board-filters";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { SearchX } from "lucide-react";
-import type { Card, Column, Profile, BoardWithDetails } from "@/types";
+import type { Card, Profile, BoardWithDetails } from "@/types";
 
 interface KanbanBoardProps {
   board: BoardWithDetails;
   members: Profile[];
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<unknown>;
 }
 
 export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
   const [columns, setColumns] = useState(board.columns);
+  const [sourceColumns, setSourceColumns] = useState(board.columns);
+  const [movePending, setMovePending] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { setDragState, filters, sorts, search, clearFilters, clearSorts, setSearch } = useBoardStore();
   const newCardRequestId = useAppStore((s) => s.newCardRequestId);
-  const supabase = createClient();
+  const dragSnapshot = useRef(board.columns);
+  const columnsRef = useRef(columns);
+  const savingMove = useRef(false);
 
-  // Sync local columns when board prop changes (filters, realtime, etc.)
-  useEffect(() => {
+  // Reconcile refreshed canonical data only after an active drag/save finishes.
+  if (sourceColumns !== board.columns && !movePending && !activeCard) {
+    setSourceColumns(board.columns);
     setColumns(board.columns);
-  }, [board.columns]);
+  }
+  useEffect(() => { columnsRef.current = columns; }, [columns]);
 
   // Cmd+N -> quick-create a card in the first column
   useEffect(() => {
@@ -59,7 +65,8 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
   }, [newCardRequestId]);
 
   const viewActive = isViewActive(filters, sorts, search);
-  const totalVisibleCards = columns.reduce((n, c) => n + c.cards.length, 0);
+  const visibleColumns = applyViewToColumns(columns, filters, sorts, search);
+  const totalVisibleCards = visibleColumns.reduce((n, c) => n + c.cards.length, 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -70,125 +77,62 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
     })
   );
 
-  const findColumnByCardId = useCallback(
-    (cardId: string) => {
-      return columns.find((col) =>
-        col.cards.some((card) => card.id === cardId)
-      );
-    },
-    [columns]
-  );
-
   function handleDragStart(event: DragStartEvent) {
-    const { active } = event;
-    const card = active.data.current?.card as Card | undefined;
+    if (savingMove.current) return;
+    const card = event.active.data.current?.card as Card | undefined;
     if (card) {
+      dragSnapshot.current = columnsRef.current;
       setActiveCard(card);
       setDragState(card.id, card.column_id);
     }
   }
 
   function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
+    if (!event.over || savingMove.current) return;
+    const activeId = String(event.active.id);
+    const overId = String(event.over.id);
+    const current = columnsRef.current;
+    const source = current.find(col => col.cards.some(card => card.id === activeId));
+    const destination = overId.startsWith("column-")
+      ? current.find(col => col.id === overId.slice(7))
+      : current.find(col => col.cards.some(card => card.id === overId));
+    if (!source || !destination || source.id === destination.id) return;
+    const preview = moveBoardCard(current, activeId, overId);
+    columnsRef.current = preview;
+    setColumns(preview);
+  }
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const activeColumn = findColumnByCardId(activeId);
-    let overColumn: (Column & { cards: Card[] }) | undefined;
-
-    // Check if over a column directly
-    if (overId.startsWith("column-")) {
-      const colId = overId.replace("column-", "");
-      overColumn = columns.find((c) => c.id === colId);
-    } else {
-      overColumn = findColumnByCardId(overId);
-    }
-
-    if (!activeColumn || !overColumn || activeColumn.id === overColumn.id)
-      return;
-
-    setColumns((prev) => {
-      const activeCards = [...activeColumn.cards];
-      const overCards = [...overColumn!.cards];
-      const activeIndex = activeCards.findIndex((c) => c.id === activeId);
-
-      const [movedCard] = activeCards.splice(activeIndex, 1);
-      movedCard.column_id = overColumn!.id;
-
-      const overIndex = overId.startsWith("column-")
-        ? overCards.length
-        : overCards.findIndex((c) => c.id === overId);
-
-      overCards.splice(overIndex, 0, movedCard);
-
-      return prev.map((col) => {
-        if (col.id === activeColumn.id) return { ...col, cards: activeCards };
-        if (col.id === overColumn!.id) return { ...col, cards: overCards };
-        return col;
-      });
-    });
+  function handleDragCancel() {
+    columnsRef.current = dragSnapshot.current;
+    setColumns(dragSnapshot.current);
+    setActiveCard(null);
+    setDragState(null, null);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+    if (savingMove.current) return;
+    if (!event.over) { handleDragCancel(); return; }
+    const snapshot = dragSnapshot.current;
+    const activeId = String(event.active.id);
+    const finalColumns = moveBoardCard(snapshot, activeId, String(event.over.id));
+    if (finalColumns === snapshot) { handleDragCancel(); return; }
+    savingMove.current = true;
+    setMovePending(true);
+    columnsRef.current = finalColumns;
+    setColumns(finalColumns);
     setActiveCard(null);
     setDragState(null, null);
-
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const column = findColumnByCardId(activeId);
-    if (!column) return;
-
-    // Reorder within same column
-    if (!overId.startsWith("column-")) {
-      const overColumn = findColumnByCardId(overId);
-      if (column.id === overColumn?.id) {
-        const cards = [...column.cards];
-        const oldIndex = cards.findIndex((c) => c.id === activeId);
-        const newIndex = cards.findIndex((c) => c.id === overId);
-        if (oldIndex !== newIndex) {
-          const [moved] = cards.splice(oldIndex, 1);
-          cards.splice(newIndex, 0, moved);
-          setColumns((prev) =>
-            prev.map((col) =>
-              col.id === column.id ? { ...col, cards } : col
-            )
-          );
-        }
-      }
-    }
-
-    // Persist positions to database
     try {
-      // Update all card positions in affected columns
-      const affectedColumnIds = new Set<string>();
-      affectedColumnIds.add(active.data.current?.card?.column_id);
-      const currentColumn = findColumnByCardId(activeId);
-      if (currentColumn) affectedColumnIds.add(currentColumn.id);
-
-      for (const colId of affectedColumnIds) {
-        const col = columns.find((c) => c.id === colId);
-        if (!col) continue;
-        const updates = col.cards.map((card, index) =>
-          supabase
-            .from("cards")
-            .update({
-              position: index,
-              column_id: colId,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", card.id)
-        );
-        await Promise.all(updates);
-      }
+      await persistBoardMove(finalColumns, activeId);
+      await onRefresh();
     } catch {
+      columnsRef.current = snapshot;
+      setColumns(snapshot);
       toast.error("Failed to save card position");
       onRefresh();
+    } finally {
+      savingMove.current = false;
+      setMovePending(false);
     }
   }
 
@@ -210,6 +154,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         )
       );
       toast.success("Card created");
+      onRefresh();
     } catch {
       toast.error("Failed to create card");
     }
@@ -235,8 +180,10 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
             : col.cards.filter((c) => c.id !== cardId),
         }))
       );
-    } catch {
+      onRefresh();
+    } catch (error) {
       toast.error("Failed to update card");
+      throw error;
     }
   }
 
@@ -252,18 +199,21 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         }))
       );
       toast.success("Card deleted");
-    } catch {
+      onRefresh();
+    } catch (error) {
       toast.error("Failed to delete card");
+      throw error;
     }
   }
 
   async function handleRenameColumn(columnId: string, name: string) {
     try {
-      await fetch(`/api/boards/${board.id}/columns`, {
+      const res = await fetch(`/api/boards/${board.id}/columns`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ columns: [{ id: columnId, name }] }),
       });
+      if (!res.ok) throw new Error("Failed to rename column");
       setColumns((prev) =>
         prev.map((col) =>
           col.id === columnId ? { ...col, name } : col
@@ -300,6 +250,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
+        onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}
       >
         <div className="relative min-h-0 flex-1">
@@ -330,7 +281,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
             </div>
           )}
           <div className="flex h-full gap-3 overflow-x-auto px-6 py-5">
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <KanbanColumn
                 key={column.id}
                 column={column}
@@ -340,8 +291,8 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
                   setSelectedCard(card);
                   setDialogOpen(true);
                 }}
-                onUpdateCard={handleUpdateCard}
-                onDeleteCard={handleDeleteCard}
+                onUpdateCard={(id, data) => { void handleUpdateCard(id, data).catch(() => {}); }}
+                onDeleteCard={(id) => { void handleDeleteCard(id).catch(() => {}); }}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleDeleteColumn}
               />

@@ -64,7 +64,6 @@ export function ActivityFeed({ cardId }: ActivityFeedProps) {
     async (nextCursor?: string) => {
       const isMore = !!nextCursor;
       if (isMore) setLoadingMore(true);
-      else setLoading(true);
 
       try {
         const url = `/api/cards/${cardId}/activity?limit=20${nextCursor ? `&cursor=${nextCursor}` : ""}`;
@@ -87,7 +86,8 @@ export function ActivityFeed({ cardId }: ActivityFeedProps) {
   );
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
 
   // Group: top-level items + replies grouped by parent

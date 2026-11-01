@@ -21,7 +21,6 @@ import {
   type SortField,
   type SortDir,
   type ViewFilter,
-  type ViewSort,
 } from "@/stores/board-store";
 import {
   Filter,

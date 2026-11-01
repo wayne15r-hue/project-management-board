@@ -13,7 +13,7 @@ import {
   type SortField,
   type ViewSort,
 } from "@/stores/board-store";
-import { isViewActive } from "@/lib/board-filters";
+import { applyView, isViewActive } from "@/lib/board-filters";
 import type { BoardWithDetails, Card, Profile, Priority } from "@/types";
 
 interface TableViewProps {
@@ -59,14 +59,14 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
 
   const flatCards: FlatCard[] = useMemo(
     () =>
-      board.columns.flatMap((col) =>
+      applyView(board.columns.flatMap((col) =>
         col.cards.map((card) => ({
           ...card,
           columnName: col.name,
           columnColor: col.color,
         }))
-      ),
-    [board.columns]
+      ), filters, sorts, search),
+    [board.columns, filters, sorts, search]
   );
 
   const viewActive = isViewActive(filters, sorts, search);
@@ -97,8 +97,9 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
       });
       if (!res.ok) throw new Error("Failed to update card");
       onRefresh();
-    } catch {
+    } catch (error) {
       toast.error("Failed to update card");
+      throw error;
     }
   }
 
@@ -107,8 +108,9 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
       const res = await fetch(`/api/cards/${cardId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete card");
       onRefresh();
-    } catch {
+    } catch (error) {
       toast.error("Failed to delete card");
+      throw error;
     }
   }
 

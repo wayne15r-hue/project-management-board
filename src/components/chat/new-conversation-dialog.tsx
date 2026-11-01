@@ -21,7 +21,11 @@ interface Props {
   onCreated: (conversationId: string) => void;
 }
 
-export function NewConversationDialog({ open, onOpenChange, onCreated }: Props) {
+export function NewConversationDialog(props: Props) {
+  return props.open ? <ConversationDialogContent {...props} /> : null;
+}
+
+function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ChatProfile[]>([]);
   const [selected, setSelected] = useState<ChatProfile[]>([]);
@@ -31,25 +35,17 @@ export function NewConversationDialog({ open, onOpenChange, onCreated }: Props) 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setSelected([]);
-      setGroupName("");
-      setGroupNameError(null);
-      setResults([]);
-    }
-  }, [open]);
-
-  useEffect(() => {
     if (!open) return;
+    const controller = new AbortController();
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       const res = await fetch(
-        `/api/profile/search?q=${encodeURIComponent(query)}`
-      );
-      if (res.ok) setResults(await res.json());
+        `/api/profile/search?q=${encodeURIComponent(query)}`, { signal: controller.signal }
+      ).catch(() => null);
+      if (res?.ok) { const results = await res.json(); if (!controller.signal.aborted) setResults(results); }
     }, 200);
     return () => {
+      controller.abort();
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [open, query]);

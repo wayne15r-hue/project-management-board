@@ -44,7 +44,8 @@ export function OnboardingWizard({ userName, boardCount, userId }: OnboardingWiz
     if (boardCount > 0) return;
     const done = localStorage.getItem(STORAGE_KEY);
     if (done) return;
-    setVisible(true);
+    const timer = setTimeout(() => setVisible(true), 0);
+    return () => clearTimeout(timer);
   }, [boardCount]);
 
   function finish() {
@@ -158,7 +159,7 @@ export function OnboardingWizard({ userName, boardCount, userId }: OnboardingWiz
               Welcome to ProjectBoard{userName ? `, ${userName.split(" ")[0]}` : ""}!
             </h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
-              Let's set up your workspace in 30 seconds.
+              Let&apos;s set up your workspace in 30 seconds.
             </p>
             <Button
               onClick={() => setStep(1)}
@@ -323,7 +324,7 @@ export function OnboardingWizard({ userName, boardCount, userId }: OnboardingWiz
               <span role="img" aria-label="party">🎉</span>
             </div>
             <h2 className="text-[24px] font-bold text-foreground">
-              You're all set!
+              You&apos;re all set!
             </h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
               Your board is ready. Start adding cards and organizing your work.

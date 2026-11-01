@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { KanbanBoard } from "@/components/board/kanban-board";
 import { BoardHeader } from "@/components/board/board-header";
@@ -11,7 +11,9 @@ import { BoardAnalytics } from "@/components/analytics/board-analytics";
 import { CalendarView } from "@/components/board/calendar-view";
 import { useRealtimeCards } from "@/hooks/use-realtime-cards";
 import { useBoardPresence } from "@/hooks/use-board-presence";
-import { useBoardStore, type ViewFilter, type ViewSort } from "@/stores/board-store";
+import { useBoardStore } from "@/stores/board-store";
+import { CardDetailDialog } from "@/components/board/card-detail-dialog";
+import { decodeBoardState, encodeBoardState, targetCardId } from "@/lib/board-url-state";
 import { applyViewToColumns } from "@/lib/board-filters";
 import { getBoardThemeClass } from "@/lib/board-themes";
 import { BoardSkeleton } from "@/components/board/board-skeleton";
@@ -30,38 +32,13 @@ async function fetchMembers(): Promise<Profile[]> {
   return res.json();
 }
 
-function encodeState(filters: ViewFilter[], sorts: ViewSort[], search: string) {
-  const params = new URLSearchParams();
-  if (search.trim()) params.set("q", search);
-  if (filters.length) params.set("filter", JSON.stringify(filters));
-  if (sorts.length) params.set("sort", JSON.stringify(sorts));
-  return params.toString();
-}
-
-function decodeState(params: URLSearchParams): {
-  filters: ViewFilter[];
-  sorts: ViewSort[];
-  search: string;
-} {
-  const search = params.get("q") ?? "";
-  let filters: ViewFilter[] = [];
-  let sorts: ViewSort[] = [];
-  try {
-    const f = params.get("filter");
-    if (f) filters = JSON.parse(f);
-  } catch {}
-  try {
-    const s = params.get("sort");
-    if (s) sorts = JSON.parse(s);
-  } catch {}
-  return { filters, sorts, search };
-}
-
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hydratedRef = useRef(false);
+  const pathname = usePathname();
+  const hydratingRef = useRef(false);
+  const queryRef = useRef(searchParams.toString());
 
   const activeView = useBoardStore((s) => s.activeView);
   const setActiveView = useBoardStore((s) => s.setActiveView);
@@ -70,20 +47,23 @@ export default function BoardPage() {
   const search = useBoardStore((s) => s.search);
   const hydrate = useBoardStore((s) => s.hydrate);
 
-  // Hydrate from URL on first mount
+  // URL navigation (including board switching/back/forward) is authoritative.
   useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-    hydrate(decodeState(new URLSearchParams(searchParams.toString())));
-  }, [hydrate, searchParams]);
+    queryRef.current = searchParams.toString();
+    hydratingRef.current = true;
+    hydrate(decodeBoardState(new URLSearchParams(queryRef.current)));
+    hydratingRef.current = false;
+  }, [boardId, searchParams, hydrate]);
 
-  // Push state changes to URL
-  useEffect(() => {
-    if (!hydratedRef.current) return;
-    const qs = encodeState(filters, sorts, search);
-    const url = qs ? `?${qs}` : window.location.pathname;
-    router.replace(url, { scroll: false });
-  }, [filters, sorts, search, router]);
+  // Subscribe to actual UI changes rather than writing stale render state back
+  // during URL hydration. Preserve notification and unrelated query parameters.
+  useEffect(() => useBoardStore.subscribe((state, previous) => {
+    if (hydratingRef.current || (state.filters === previous.filters && state.sorts === previous.sorts && state.search === previous.search)) return;
+    const qs = encodeBoardState(new URLSearchParams(queryRef.current), state);
+    if (qs === queryRef.current) return;
+    queryRef.current = qs;
+    router.replace(qs ? pathname + "?" + qs : pathname, { scroll: false });
+  }), [pathname, router]);
 
   const {
     data: board,
@@ -122,6 +102,8 @@ export default function BoardPage() {
     );
   }
 
+  const notificationCard = board.columns.flatMap(c => c.cards).find(c => c.id === targetCardId(new URLSearchParams(searchParams.toString()))) ?? null;
+
   const themeClass = getBoardThemeClass(board.background_theme);
 
   return (
@@ -134,13 +116,39 @@ export default function BoardPage() {
         presence={presence}
       />
 
+      <CardDetailDialog
+        key={notificationCard?.id ?? "notification"}
+        card={notificationCard}
+        board={board}
+        columns={board.columns}
+        members={members}
+        open={!!notificationCard}
+        onOpenChange={(open) => {
+          if (open) return;
+          const params = new URLSearchParams(queryRef.current);
+          params.delete("card");
+          queryRef.current = params.toString();
+          router.replace(params.size ? pathname + "?" + params : pathname, { scroll: false });
+        }}
+        onUpdate={async (id, data) => {
+          const response = await fetch(`/api/cards/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+          if (!response.ok) throw new Error("Failed to save card");
+          await refetch();
+        }}
+        onDelete={async (id) => {
+          const response = await fetch(`/api/cards/${id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error("Failed to delete card");
+          await refetch();
+        }}
+      />
+
       <div
         key={activeView}
         className="flex min-h-0 flex-1 flex-col animate-fade-in"
       >
         {activeView === "kanban" && (
           <KanbanBoard
-            board={filteredBoard}
+            board={board}
             members={members}
             onRefresh={() => refetch()}
           />

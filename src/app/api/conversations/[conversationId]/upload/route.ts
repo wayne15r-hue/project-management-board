@@ -78,7 +78,7 @@ export async function POST(
 
   const { data: signed, error: signError } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(path, 60 * 60 * 24 * 7);
+    .createSignedUrl(path, 60 * 60);
   if (signError || !signed?.signedUrl) {
     console.error(
       "[conversations/[conversationId]/upload POST] sign url failed:",
@@ -105,7 +105,7 @@ export async function POST(
       sender_id: user.id,
       content: null,
       message_type: messageType,
-      file_url: signed.signedUrl,
+      file_url: path,
       file_name: file.name,
       file_size: file.size,
       file_type: file.type || "application/octet-stream",
@@ -134,5 +134,5 @@ export async function POST(
     .eq("conversation_id", conversationId)
     .eq("user_id", user.id);
 
-  return NextResponse.json(message, { status: 201 });
+  return NextResponse.json({ ...message, file_url: signed.signedUrl }, { status: 201 });
 }

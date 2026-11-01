@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { AI_MODEL, aiConfigured, getGroqClient } from "@/lib/ai/client";
+import { AI_MODEL, aiConfigured, askAI, aiErrorResponse } from "@/lib/ai/client";
 
 export async function GET() {
   return handle();
@@ -31,18 +31,16 @@ async function handle() {
   }
 
   try {
-    const client = getGroqClient();
-    await client.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 8,
-      messages: [{ role: "user", content: "ping" }],
+    await askAI({
+      userId: user.id, feature: "test", systemPrompt: "Reply briefly.",
+      userMessage: "ping", maxTokens: 8,
     });
     return NextResponse.json({ ok: true, configured: true, model: AI_MODEL });
   } catch (err: unknown) {
-    const e = err as { message?: string };
+    const { status, body } = aiErrorResponse(err);
     return NextResponse.json(
-      { ok: false, configured: true, error: e?.message || "AI test failed." },
-      { status: 502 }
+      { ok: false, configured: true, ...body },
+      { status }
     );
   }
 }

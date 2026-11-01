@@ -102,3 +102,12 @@ create policy "Activity log read" on public.activity_log
   );
 create policy "Activity log insert" on public.activity_log
   for insert with check (actor_id = auth.uid());
+
+-- Team tables now exist: extend the bootstrap owner-only board helper.
+create or replace function public.user_has_board_access(board_uuid uuid)
+returns boolean language sql security definer stable set search_path = public
+as $$
+  select exists(select 1 from public.boards b where b.id=board_uuid and b.owner_id=auth.uid())
+      or exists(select 1 from public.board_teams bt join public.team_members tm on tm.team_id=bt.team_id
+                where bt.board_id=board_uuid and tm.user_id=auth.uid());
+$$;

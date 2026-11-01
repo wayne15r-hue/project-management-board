@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,15 @@ function getBoardColor(id: string) {
 const VIEW_KEY = "pm-board-view-mode";
 const SORT_KEY = "pm-board-sort";
 
+function subscribePreferences(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("board-preferences", callback);
+  return () => { window.removeEventListener("storage", callback); window.removeEventListener("board-preferences", callback); };
+}
+function readView(): ViewMode { try { return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid"; } catch { return "grid"; } }
+function readSort(): SortKey { try { const value = localStorage.getItem(SORT_KEY); return value === "alpha" || value === "cards" ? value : "updated"; } catch { return "updated"; } }
+function writePreference(key: string, value: string) { try { localStorage.setItem(key, value); window.dispatchEvent(new Event("board-preferences")); } catch {} }
+
 export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"template" | "details">("template");
@@ -77,25 +86,12 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
   const [loading, setLoading] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ViewMode>("grid");
-  const [sort, setSort] = useState<SortKey>("updated");
+  const view = useSyncExternalStore(subscribePreferences, readView, () => "grid" as ViewMode);
+  const sort = useSyncExternalStore(subscribePreferences, readSort, () => "updated" as SortKey);
+  const setView = (value: ViewMode) => writePreference(VIEW_KEY, value);
+  const setSort = (value: SortKey) => writePreference(SORT_KEY, value);
   const router = useRouter();
   const supabase = createClient();
-
-  // Hydrate persisted view/sort preferences
-  useEffect(() => {
-    const v = localStorage.getItem(VIEW_KEY) as ViewMode | null;
-    if (v === "grid" || v === "list") setView(v);
-    const s = localStorage.getItem(SORT_KEY) as SortKey | null;
-    if (s === "updated" || s === "alpha" || s === "cards") setSort(s);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(VIEW_KEY, view);
-  }, [view]);
-  useEffect(() => {
-    localStorage.setItem(SORT_KEY, sort);
-  }, [sort]);
 
   // Load favorites
   useEffect(() => {

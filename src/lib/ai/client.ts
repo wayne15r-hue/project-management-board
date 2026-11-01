@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const AI_MODEL =
   process.env.AI_MODEL || "llama-3.3-70b-versatile";
@@ -36,22 +36,21 @@ export function getGroqClient() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }
 
-async function checkDailyLimit(userId: string): Promise<void> {
-  const supabase = await createClient();
-  const since = new Date();
-  since.setUTCHours(0, 0, 0, 0);
-  const { count } = await supabase
-    .from("ai_usage")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", since.toISOString());
-  if ((count ?? 0) >= DAILY_LIMIT) {
+async function reserveUsage(userId: string, feature: string): Promise<string> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("reserve_ai_usage", {
+    p_user_id: userId,
+    p_feature: feature,
+  });
+  if (!data && !error || error?.message === "Daily AI limit reached") {
     throw new AIError(
       "Daily AI limit reached. Resets tomorrow.",
       "daily_limit",
       429
     );
   }
+  if (error) throw new AIError("AI usage tracking is unavailable. Try again later.", "unknown", 503);
+  return data as string;
 }
 
 type AskOptions = {
@@ -64,6 +63,23 @@ type AskOptions = {
 };
 
 export async function askAI(opts: AskOptions): Promise<string> {
+  return completeAI({
+    userId: opts.userId, feature: opts.feature, maxTokens: opts.maxTokens,
+    json: opts.json,
+    messages: [
+      { role: "system", content: opts.systemPrompt },
+      { role: "user", content: opts.userMessage },
+    ],
+  });
+}
+
+export async function completeAI(opts: {
+  userId: string;
+  feature: string;
+  maxTokens?: number;
+  json?: boolean;
+  messages: Groq.Chat.Completions.ChatCompletionMessageParam[];
+}): Promise<string> {
   if (!aiConfigured()) {
     throw new AIError(
       "AI features are currently unavailable.",
@@ -71,7 +87,9 @@ export async function askAI(opts: AskOptions): Promise<string> {
       503
     );
   }
-  await checkDailyLimit(opts.userId);
+  // Attempts consume one daily slot even when the provider fails. Reserving
+  // before the billed request prevents concurrent calls from exceeding the cap.
+  const usageId = await reserveUsage(opts.userId, opts.feature);
 
   const client = getGroqClient();
 
@@ -82,10 +100,7 @@ export async function askAI(opts: AskOptions): Promise<string> {
       max_tokens: opts.maxTokens ?? 1024,
       temperature: 0.7,
       response_format: opts.json ? { type: "json_object" } : undefined,
-      messages: [
-        { role: "system", content: opts.systemPrompt },
-        { role: "user", content: opts.userMessage },
-      ],
+      messages: opts.messages,
     });
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string };
@@ -100,16 +115,15 @@ export async function askAI(opts: AskOptions): Promise<string> {
   }
 
   try {
-    const supabase = await createClient();
-    await supabase.from("ai_usage").insert({
-      user_id: opts.userId,
-      feature: opts.feature,
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("ai_usage").update({
       input_tokens: response.usage?.prompt_tokens ?? 0,
       output_tokens: response.usage?.completion_tokens ?? 0,
       model: AI_MODEL,
-    });
-  } catch {
-    // ignore usage logging errors
+    }).eq("id", usageId);
+    if (error) console.error("AI usage totals could not be updated:", error.message);
+  } catch (error) {
+    console.error("AI usage totals could not be updated:", error);
   }
 
   const text = response.choices[0]?.message?.content ?? "";
