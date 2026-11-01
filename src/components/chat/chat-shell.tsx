@@ -28,7 +28,7 @@ export function ChatShell({ currentUser }: Props) {
       if (request !== latestRequest.current.id) return;
       setConversations(data);
       setLoading(false);
-      setActiveId((current) => current ?? data[0]?.id ?? null);
+      setActiveId((current) => current ? data.some(c => c.id === current) ? current : null : data[0]?.id ?? null);
     }).catch(() => {
       if (request === latestRequest.current.id) { setLoading(false); toast.error("Couldn't load conversations."); }
     });
@@ -92,14 +92,23 @@ export function ChatShell({ currentUser }: Props) {
     const refresh = () => { if (document.visibilityState === "visible") void loadConversations(); };
     window.addEventListener("online", refresh);
     document.addEventListener("visibilitychange", refresh);
+    // DELETE events may be missed when membership RLS revokes visibility.
+    const membershipRefresh = window.setInterval(refresh, 30000);
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener("online", refresh);
       document.removeEventListener("visibilitychange", refresh);
+      window.clearInterval(membershipRefresh);
     };
   }, [currentUser.id, loadConversations]);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+  const handleAccessRevoked = useCallback((conversationId: string) => {
+    latestRequest.current.id++;
+    setConversations(previous => previous.filter(c => c.id !== conversationId));
+    setActiveId(current => current === conversationId ? null : current);
+    void loadConversations();
+  }, [loadConversations]);
 
   const handleRead = useCallback((conversationId: string, through: string) => {
     // Invalidate lists fetched before the read completed.
@@ -160,6 +169,8 @@ export function ChatShell({ currentUser }: Props) {
             onMessageSent={loadConversations}
             onDelete={handleDelete}
             onRead={handleRead}
+            onGroupChanged={loadConversations}
+            onAccessRevoked={handleAccessRevoked}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">

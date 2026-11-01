@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "./avatar";
 import { MessageInput } from "./message-input";
+import { GroupDetailsDialog } from './group-details-dialog';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Tooltip,
@@ -47,6 +48,8 @@ interface Props {
   onMessageSent: () => void;
   onDelete: (conversationId: string) => void | Promise<void>;
   onRead?: (conversationId: string, through: string) => void;
+  onGroupChanged?: () => void | Promise<void>;
+  onAccessRevoked?: (conversationId: string) => void;
 }
 
 interface PresenceState {
@@ -113,7 +116,10 @@ function MessageThreadContent({
   onMessageSent,
   onDelete,
   onRead,
+  onGroupChanged,
+  onAccessRevoked,
 }: Props) {
+  const [groupOpen, setGroupOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasOlder, setHasOlder] = useState(false);
@@ -148,10 +154,24 @@ function MessageThreadContent({
     () => conversation.members.filter((m) => m.id !== currentUser.id),
     [conversation.members, currentUser.id]
   );
+  const revokeAccess = useCallback(() => {
+    setMessages([]);
+    setPendingFile(null);
+    setLightbox(null);
+    setGroupOpen(false);
+    requestController.current?.abort();
+    onAccessRevoked?.(conversation.id);
+  }, [conversation.id, onAccessRevoked]);
+  const checkAccess = useCallback((response: Response) => {
+    if (response.status !== 403 && response.status !== 404) return false;
+    revokeAccess();
+    return true;
+  }, [revokeAccess]);
 
   const loadMessages = useCallback((signal: AbortSignal) => {
     return fetch(`/api/conversations/${conversation.id}/messages?limit=50`, { signal })
       .then(async (response) => {
+        if (checkAccess(response)) return;
         if (!response.ok) throw new Error("Couldn't load messages.");
         const page: Message[] = await response.json();
         if (signal.aborted) return;
@@ -161,7 +181,7 @@ function MessageThreadContent({
       }).catch((error) => {
         if (!signal.aborted) toast.error(error instanceof Error ? error.message : "Couldn't load messages.");
       }).finally(() => { if (!signal.aborted) setLoading(false); });
-  }, [conversation.id]);
+  }, [conversation.id, checkAccess]);
 
   const recoverMessages = useCallback(async () => {
     const signal = requestController.current?.signal;
@@ -175,6 +195,7 @@ function MessageThreadContent({
       while (!signal.aborted) {
         const params = new URLSearchParams({ after: cursor.created_at, after_id: cursor.id, limit: "50" });
         const response = await fetch(`/api/conversations/${conversation.id}/messages?${params}`, { signal });
+        if (checkAccess(response)) return;
         if (!response.ok) throw new Error("Couldn't recover missed messages.");
         const page: Message[] = await response.json();
         if (signal.aborted) return;
@@ -189,7 +210,7 @@ function MessageThreadContent({
     } catch {
       if (!signal.aborted) toast.error("Couldn't recover missed messages. Reopen the conversation to retry.");
     } finally { recovering.current = false; }
-  }, [conversation.id]);
+  }, [conversation.id, checkAccess]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -206,6 +227,7 @@ function MessageThreadContent({
     try {
       const params = new URLSearchParams({ limit: "50", before: oldest.created_at, before_id: oldest.id });
       const response = await fetch(`/api/conversations/${conversation.id}/messages?${params}`, { signal });
+      if (checkAccess(response)) return;
       if (!response.ok) throw new Error("Couldn't load older messages.");
       const page: Message[] = await response.json();
       if (signal.aborted) return;
@@ -246,6 +268,7 @@ function MessageThreadContent({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message_id: id }),
         });
+        if (checkAccess(response)) return;
         if (!response.ok) throw new Error("Couldn't mark messages as read.");
         if (signal.aborted) return;
         lastReadMessageRef.current = id;
@@ -259,7 +282,7 @@ function MessageThreadContent({
       }
     }
     void readVisibleMessages();
-  }, [conversation.id, onRead]);
+  }, [conversation.id, onRead, checkAccess]);
 
   useEffect(() => {
     latestMessageRef.current = messages.at(-1)?.id ?? null;
@@ -353,6 +376,7 @@ function MessageThreadContent({
             // Fetch this exact event through the signing boundary. A busy burst
             // must not replace history with a globally bounded newest page.
             const response = await fetch(`/api/conversations/${conversation.id}/messages?message_id=${encodeURIComponent(row.id)}`, { signal });
+            if (checkAccess(response)) return;
             if (!response.ok) throw new Error("Couldn't refresh message.");
             const page: Message[] = await response.json();
             if (signal.aborted) return;
@@ -399,7 +423,7 @@ function MessageThreadContent({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation.id, currentUser.id, recoverMessages, markRead]);
+  }, [conversation.id, currentUser.id, recoverMessages, markRead, checkAccess]);
 
   // Typing presence channel
   useEffect(() => {
@@ -501,6 +525,7 @@ function MessageThreadContent({
         body: JSON.stringify({ content, message_type: "text" }),
       }
     );
+    if (checkAccess(res)) return false;
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       toast.error(j?.error || "Couldn't send message.");
@@ -529,6 +554,7 @@ function MessageThreadContent({
       `/api/conversations/${conversation.id}/upload`,
       { method: "POST", body: fd }
     );
+    if (checkAccess(res)) return false;
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       toast.error(j?.error || "Upload failed.");
@@ -656,10 +682,11 @@ function MessageThreadContent({
         />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[14px] font-semibold">{title}</h2>
+          {conversation.type === 'group' ? <button type="button" aria-label="Group details" onClick={() => setGroupOpen(true)} className="text-[11px] text-muted-foreground hover:underline">{conversation.members.length} members · Group details</button> :
           <p className="truncate text-[11px] text-muted-foreground">
             {conversation.members.length}{" "}
             {conversation.members.length === 1 ? "member" : "members"}
-          </p>
+          </p>}
         </div>
         {conversation.current_user_is_admin && (
           <button
@@ -681,6 +708,17 @@ function MessageThreadContent({
           </button>
         )}
       </header>
+      {conversation.type === 'group' && (
+        <GroupDetailsDialog
+          open={groupOpen}
+          conversationId={conversation.id}
+          currentUserId={currentUser.id}
+          refreshKey={conversation.updated_at}
+          onOpenChange={setGroupOpen}
+          onChanged={onGroupChanged ?? onMessageSent}
+          onAccessRevoked={revokeAccess}
+        />
+      )}
 
       <div
         ref={scrollRef}
