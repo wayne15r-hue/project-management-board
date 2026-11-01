@@ -251,3 +251,27 @@ it("applies combined card moves and metadata atomically, preserving absent field
     expect((await db.query(`select due_date,assignee_id,title from cards where id='${card}'`)).rows).toEqual([{due_date:null,assignee_id:null,title:"Changed"}]);
   } finally {await db.close();}
 },30000);
+
+it("hardens observed legacy chat policy names while preserving member read-state, leave and admin operations",async () => {
+  const db=await database({legacy:true});
+  try {
+    await db.exec(`create function public.is_conversation_admin(conv_id uuid) returns boolean language sql security definer stable set search_path=public as $$
+        select exists(select 1 from public.conversation_members m where m.conversation_id=conv_id and m.user_id=auth.uid() and m.is_admin=true)
+      $$;
+      alter policy "Members insert" on conversation_members rename to "Members insert clean";
+      alter policy "Members insert clean" on conversation_members with check(user_id=auth.uid() or conversation_id in(select id from public.conversations where created_by=auth.uid()) or public.is_conversation_admin(conversation_id));
+      create policy "Members delete" on conversation_members for delete to authenticated using(user_id=auth.uid() or public.is_conversation_admin(conversation_id));
+      create policy "Conversations update" on conversations for update to authenticated using(public.is_conversation_admin(id));`);
+    await db.exec(fs.readFileSync("supabase/migrations/20261101_audit_hardening.sql","utf8"));
+    expect((await asUser(db,3,"select * from conversation_members")).rows).toEqual([]);
+    expect((await asUser(db,3,"delete from conversation_members returning user_id")).rows).toEqual([]);
+    await expect(asUser(db,3,`insert into conversation_members(conversation_id,user_id,is_admin) values ('${conversation}',auth.uid(),true)`)).rejects.toThrow();
+    expect((await asUser(db,2,`update conversations set name='Not admin' where id='${conversation}' returning id`)).rows).toEqual([]);
+    expect((await asUser(db,1,`update conversations set name='Admin edit' where id='${conversation}' returning name`)).rows).toEqual([{name:"Admin edit"}]);
+    expect((await asUser(db,1,`delete from conversation_members where user_id='${uid(2)}' returning user_id`)).rows).toEqual([]);
+    expect((await asUser(db,2,"update conversation_members set last_read_at=now() where user_id=auth.uid() returning user_id")).rows).toEqual([{user_id:uid(2)}]);
+    expect((await asUser(db,2,`update conversation_members set last_read_at=now() where user_id='${uid(1)}' returning user_id`)).rows).toEqual([]);
+    expect((await asUser(db,2,`delete from conversation_members where user_id='${uid(1)}' returning user_id`)).rows).toEqual([]);
+    expect((await asUser(db,2,"delete from conversation_members where user_id=auth.uid() returning user_id")).rows).toEqual([{user_id:uid(2)}]);
+  } finally {await db.close();}
+},30000);

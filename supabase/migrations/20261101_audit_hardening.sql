@@ -54,11 +54,11 @@ returns boolean language sql security definer stable set search_path=public as $
   select exists(select 1 from public.team_members m where m.team_id=p_team_id and m.user_id=auth.uid() and m.role in ('owner','admin'));
 $$;
 
-drop policy "Labels access" on public.labels;
+drop policy if exists "Labels access" on public.labels;
 create policy "Labels board access" on public.labels for all to authenticated using(public.user_has_board_access(board_id)) with check(public.user_has_board_access(board_id));
-drop policy "Card labels access" on public.card_labels;
+drop policy if exists "Card labels access" on public.card_labels;
 create policy "Card labels board access" on public.card_labels for all to authenticated using(public.user_has_board_access(board_id)) with check(public.user_has_board_access(board_id));
-drop policy "Attachments access" on public.attachments;
+drop policy if exists "Attachments access" on public.attachments;
 create policy "Attachments read" on public.attachments for select to authenticated using(public.user_has_card_access(card_id));
 create policy "Attachments insert" on public.attachments for insert to authenticated with check(public.user_has_card_access(card_id) and uploaded_by=auth.uid() and storage_path like card_id::text||'/%');
 create policy "Attachments update" on public.attachments for update to authenticated using(public.user_has_card_access(card_id)) with check(public.user_has_card_access(card_id) and storage_path like card_id::text||'/%');
@@ -73,11 +73,11 @@ $$;
 create function public.can_access_chat_object(p_name text) returns boolean language sql security definer stable set search_path=public as $$
   select exists(select 1 from public.conversation_members m where m.conversation_id::text=split_part(p_name,'/',1) and position('/' in p_name)>0 and m.user_id=auth.uid());
 $$;
-drop policy "Authenticated users can view attachments" on storage.objects;
-drop policy "Authenticated users can upload attachments" on storage.objects;
-drop policy "Authenticated users can delete attachments" on storage.objects;
-drop policy "Chat files read" on storage.objects;
-drop policy "Chat files upload" on storage.objects;
+drop policy if exists "Authenticated users can view attachments" on storage.objects;
+drop policy if exists "Authenticated users can upload attachments" on storage.objects;
+drop policy if exists "Authenticated users can delete attachments" on storage.objects;
+drop policy if exists "Chat files read" on storage.objects;
+drop policy if exists "Chat files upload" on storage.objects;
 create policy "Private attachment objects" on storage.objects for all to authenticated using(bucket_id='attachments' and public.can_access_attachment_object(name)) with check(bucket_id='attachments' and public.can_access_attachment_object(name));
 create policy "Private chat objects" on storage.objects for all to authenticated using(bucket_id='chat-files' and public.can_access_chat_object(name)) with check(bucket_id='chat-files' and public.can_access_chat_object(name));
 
@@ -97,17 +97,31 @@ end $$;
 create trigger protect_board_owner before update on public.boards for each row execute function public.protect_board_owner();
 
 -- Membership identities and privileges are server managed. Members can update only read state.
-drop policy "Members insert" on public.conversation_members;
+drop policy if exists "Members insert" on public.conversation_members;
+drop policy if exists "Members insert clean" on public.conversation_members;
+drop policy if exists "Members delete" on public.conversation_members;
+drop policy if exists "Members delete own" on public.conversation_members;
+drop policy if exists "Members select own" on public.conversation_members;
+drop policy if exists "Members update own" on public.conversation_members;
+create policy "Members select own" on public.conversation_members for select to authenticated using(user_id=auth.uid() or public.is_conversation_member(conversation_id));
+create policy "Members update own" on public.conversation_members for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "Members delete own" on public.conversation_members for delete to authenticated using(user_id=auth.uid());
+-- Known deployed variants coexist as permissive OR policies. Replace only these known names.
+drop policy if exists "Conversations update" on public.conversations;
+drop policy if exists "Conversations update admins" on public.conversations;
+create policy "Conversations update admins" on public.conversations for update to authenticated
+  using(exists(select 1 from public.conversation_members m where m.conversation_id=conversations.id and m.user_id=auth.uid() and m.is_admin=true))
+  with check(exists(select 1 from public.conversation_members m where m.conversation_id=conversations.id and m.user_id=auth.uid() and m.is_admin=true));
 revoke insert,update on public.conversation_members from public,anon,authenticated;
 grant update(last_read_at) on public.conversation_members to authenticated;
 
-drop policy "Team select" on public.teams;
-drop policy "Team insert" on public.teams;
-drop policy "Team members select" on public.team_members;
-drop policy "Team members manage" on public.team_members;
-drop policy "Invites insert" on public.invites;
-drop policy "Invites select" on public.invites;
-drop policy "Board teams access" on public.board_teams;
+drop policy if exists "Team select" on public.teams;
+drop policy if exists "Team insert" on public.teams;
+drop policy if exists "Team members select" on public.team_members;
+drop policy if exists "Team members manage" on public.team_members;
+drop policy if exists "Invites insert" on public.invites;
+drop policy if exists "Invites select" on public.invites;
+drop policy if exists "Board teams access" on public.board_teams;
 create policy "Team member read" on public.teams for select to authenticated using(public.is_team_member(id));
 create policy "Team membership read" on public.team_members for select to authenticated using(public.is_team_member(team_id));
 -- auth.users is not client-readable; use an auth-scoped helper instead of a policy subquery.
@@ -156,7 +170,7 @@ begin
   return invitation.team_id;
 end $$;
 
-drop policy "Activity log insert" on public.activity_log;
+drop policy if exists "Activity log insert" on public.activity_log;
 create policy "Activity log authorized insert" on public.activity_log for insert to authenticated with check(actor_id=auth.uid() and public.user_has_card_access(card_id));
 create policy "Authors edit comments" on public.activity_log for update to authenticated using(actor_id=auth.uid() and action='commented' and public.user_has_card_access(card_id)) with check(actor_id=auth.uid() and action='commented' and public.user_has_card_access(card_id));
 create policy "Authors delete comments" on public.activity_log for delete to authenticated using(actor_id=auth.uid() and action='commented' and public.user_has_card_access(card_id));
@@ -164,7 +178,7 @@ revoke update on public.activity_log from public,anon,authenticated;
 grant update(changes) on public.activity_log to authenticated;
 
 -- Reservations are charged even when the provider fails, so retries cannot evade the cap.
-drop policy "AI usage own" on public.ai_usage;
+drop policy if exists "AI usage own" on public.ai_usage;
 create policy "AI usage own read" on public.ai_usage for select to authenticated using(user_id=auth.uid());
 revoke insert,update,delete on public.ai_usage from public,anon,authenticated;
 create function public.reserve_ai_usage(p_user_id uuid,p_feature text) returns uuid language plpgsql security definer set search_path=public as $$
