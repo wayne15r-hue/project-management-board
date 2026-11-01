@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const AI_MODEL =
-  process.env.AI_MODEL || "llama-3.3-70b-versatile";
+  process.env.AI_MODEL || "openai/gpt-oss-120b";
 export const DAILY_LIMIT = 50;
 
 export class AIError extends Error {
