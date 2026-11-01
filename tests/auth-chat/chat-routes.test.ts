@@ -5,6 +5,18 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: async () => state.client
 import { GET, POST as sendMessage } from "@/app/api/conversations/[conversationId]/messages/route";
 import { POST as upload } from "@/app/api/conversations/[conversationId]/upload/route";
 const context = { params: Promise.resolve({ conversationId: "conv" }) };
+it('pages reconnect recovery forward using timestamp and UUID together',async()=>{
+  const f=fixture();
+  const response=await GET(new Request('https://app.test/api/messages?after=2026-11-01T00:00:00Z&after_id=00000000-0000-4000-8000-000000000001'),context);
+  expect(response.status).toBe(200);
+  expect(f.operations).toContainEqual(['order',['created_at',{ascending:true}]]);
+  expect(f.operations).toContainEqual(['or',['created_at.gt.2026-11-01T00:00:00Z,and(created_at.eq.2026-11-01T00:00:00Z,id.gt.00000000-0000-4000-8000-000000000001)']]);
+});
+it('rejects ambiguous reconnect pagination before querying messages',async()=>{
+  fixture();
+  const response=await GET(new Request('https://app.test/api/messages?after=2026-11-01T00:00:00Z&before=2026-11-01T00:01:00Z'),context);
+  expect(response.status).toBe(400);
+});
 function fixture(member = true) {
   const operations: Array<[string, unknown[]]> = [];
   const writes: Array<Record<string, unknown>> = [];

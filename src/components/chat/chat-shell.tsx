@@ -61,6 +61,21 @@ export function ChatShell({ currentUser }: Props) {
       )
       .on(
         "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversation_members", filter: `user_id=eq.${currentUser.id}` },
+        () => loadConversations()
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "conversation_members" },
+        () => loadConversations()
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations" },
+        () => loadConversations()
+      )
+      .on(
+        "postgres_changes",
         {
           event: "DELETE",
           schema: "public",
@@ -73,13 +88,25 @@ export function ChatShell({ currentUser }: Props) {
           setActiveId((cur) => (cur === deletedId ? null : cur));
         }
       )
-      .subscribe();
+      .subscribe(status => { if (status === "SUBSCRIBED") void loadConversations(); });
+    const refresh = () => { if (document.visibilityState === "visible") void loadConversations(); };
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, [currentUser.id, loadConversations]);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+
+  const handleRead = useCallback((conversationId: string, through: string) => {
+    // Invalidate lists fetched before the read completed.
+    latestRequest.current.id++;
+    setConversations(previous => previous.map(c => c.id === conversationId && (!c.last_message || Date.parse(c.last_message.created_at) <= Date.parse(through)) ? { ...c, unread_count: 0 } : c));
+    void loadConversations();
+  }, [loadConversations]);
 
   async function handleCreated(conversationId: string) {
     setNewOpen(false);
@@ -132,6 +159,7 @@ export function ChatShell({ currentUser }: Props) {
             onBack={() => setActiveId(null)}
             onMessageSent={loadConversations}
             onDelete={handleDelete}
+            onRead={handleRead}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">

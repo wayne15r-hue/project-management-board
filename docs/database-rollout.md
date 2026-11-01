@@ -39,6 +39,12 @@ The migration explicitly makes attachments/chat-files buckets private and publis
 
 ## Recovery
 
+### Chat reliability follow-up
+
+Apply `20261101_chat_reliability.sql` before deploying the matching chat application. It is transactional and repeatable, replaces only reaction policies, adds private typing authorization on Supabase's existing `realtime.messages` table, and installs the monotonic `mark_conversation_read` RPC. It does not delete messages, reactions, memberships, or attachment records. Request a PostgREST schema refresh after applying the function.
+
+Verify reaction INSERT/DELETE ownership with isolated accounts, private Presence joins, successful reads, retained drafts/files on rejected requests, reconnect recovery, and synchronized unread indicators. Refresh open clients onto the new application version. A code rollback can retain these compatible database changes; do not reinstate the old insecure reaction policy. Historical clients' bodyless read requests remain supported.
+
 Do not restore the old permissive policies to recover an application error. Keep writes paused and roll forward with a compatibility fix using the hardened RPCs. An older app version will need those RPC call sites backported before it can run against the new permissions.
 
 If the migration fails, its transaction should roll back without data loss. If a complete database restore becomes necessary, use the verified backup under operator control and keep public access disabled until hardened policies and any required secret rotations are restored. A restore discards writes made after the backup; that destructive step needs a separate explicit decision. No unsafe automatic down migration is supplied.

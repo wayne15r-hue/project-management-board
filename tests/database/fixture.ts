@@ -21,6 +21,12 @@ create function storage.foldername(text) returns text[] language sql immutable a
 
 create role anon nologin;
 create role service_role nologin bypassrls;
+create schema realtime;
+create table realtime.messages(id uuid primary key default gen_random_uuid(), topic text, extension text);
+alter table realtime.messages enable row level security;
+create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;
+grant usage on schema realtime to authenticated,anon,service_role;
+grant select,insert on realtime.messages to authenticated;
 grant usage on schema public,auth,storage to authenticated,anon,service_role;
 grant all on all tables in schema storage to authenticated,anon,service_role;
 alter default privileges in schema public,storage grant all on tables to authenticated,anon,service_role;

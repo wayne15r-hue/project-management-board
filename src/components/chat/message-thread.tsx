@@ -46,6 +46,7 @@ interface Props {
   onBack: () => void;
   onMessageSent: () => void;
   onDelete: (conversationId: string) => void | Promise<void>;
+  onRead?: (conversationId: string, through: string) => void;
 }
 
 interface PresenceState {
@@ -58,6 +59,10 @@ function mergeMessages(previous: Message[], incoming: Message[]): Message[] {
   const merged = new Map(previous.map((message) => [message.id, message]));
   for (const message of incoming) merged.set(message.id, message);
   return [...merged.values()].sort((left, right) => left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id));
+}
+
+function compareCursor(left: Pick<Message, "id" | "created_at">, right: Pick<Message, "id" | "created_at">) {
+  return Date.parse(left.created_at) - Date.parse(right.created_at) || left.id.localeCompare(right.id);
 }
 
 function titleOf(conversation: Conversation, currentUserId: string) {
@@ -107,6 +112,7 @@ function MessageThreadContent({
   onBack,
   onMessageSent,
   onDelete,
+  onRead,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +135,14 @@ function MessageThreadContent({
   > | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
-  const lastReadSentRef = useRef(0);
+  const latestMessageRef = useRef<string | null>(null);
+  const latestCursorRef = useRef<Message | null>(null);
+  const synchronizedCursor = useRef<Pick<Message, "id" | "created_at"> | null>(null);
+  const initialLoad = useRef<Promise<void> | null>(null);
+  const reactionRequests = useRef(new Map<string, Promise<void>>());
+  const recovering = useRef(false);
+  const lastReadMessageRef = useRef<string | null>(null);
+  const readInFlight = useRef(false);
 
   const otherMembers = useMemo(
     () => conversation.members.filter((m) => m.id !== currentUser.id),
@@ -142,6 +155,7 @@ function MessageThreadContent({
         if (!response.ok) throw new Error("Couldn't load messages.");
         const page: Message[] = await response.json();
         if (signal.aborted) return;
+        synchronizedCursor.current = page.at(-1) ?? { id: "00000000-0000-0000-0000-000000000000", created_at: "1970-01-01T00:00:00Z" };
         setMessages((previous) => mergeMessages(previous, page));
         setHasOlder((previous) => previous || page.length === 50);
       }).catch((error) => {
@@ -149,10 +163,38 @@ function MessageThreadContent({
       }).finally(() => { if (!signal.aborted) setLoading(false); });
   }, [conversation.id]);
 
+  const recoverMessages = useCallback(async () => {
+    const signal = requestController.current?.signal;
+    if (!signal || signal.aborted || recovering.current) return;
+    recovering.current = true;
+    try {
+      await initialLoad.current;
+      if (signal.aborted) return;
+      let cursor = synchronizedCursor.current ?? { id: "00000000-0000-0000-0000-000000000000", created_at: "1970-01-01T00:00:00Z" };
+      // Read every missed page in ascending order, including timestamp ties.
+      while (!signal.aborted) {
+        const params = new URLSearchParams({ after: cursor.created_at, after_id: cursor.id, limit: "50" });
+        const response = await fetch(`/api/conversations/${conversation.id}/messages?${params}`, { signal });
+        if (!response.ok) throw new Error("Couldn't recover missed messages.");
+        const page: Message[] = await response.json();
+        if (signal.aborted) return;
+        if (page.length > 0) {
+          const next = page.at(-1)!;
+          if (compareCursor(next, cursor) <= 0) throw new Error("Message recovery made no progress.");
+          synchronizedCursor.current = cursor = next;
+          setMessages(previous => mergeMessages(previous, page));
+        }
+        if (page.length < 50) break;
+      }
+    } catch {
+      if (!signal.aborted) toast.error("Couldn't recover missed messages. Reopen the conversation to retry.");
+    } finally { recovering.current = false; }
+  }, [conversation.id]);
+
   useEffect(() => {
     const controller = new AbortController();
     requestController.current = controller;
-    void loadMessages(controller.signal);
+    initialLoad.current = loadMessages(controller.signal);
     return () => { controller.abort(); };
   }, [loadMessages]);
 
@@ -188,15 +230,58 @@ function MessageThreadContent({
   }, [messages]);
 
   const markRead = useCallback(() => {
-    const now = Date.now();
-    if (now - lastReadSentRef.current < 2000) return;
-    lastReadSentRef.current = now;
-    fetch(`/api/conversations/${conversation.id}/read`, { method: "POST" });
-  }, [conversation.id]);
+    async function readVisibleMessages() {
+      const cursor = latestCursorRef.current;
+      const id = cursor?.id;
+      const signal = requestController.current?.signal;
+      if (!id || !signal || signal.aborted || readInFlight.current ||
+          recovering.current || !synchronizedCursor.current || compareCursor(cursor, synchronizedCursor.current) > 0 ||
+          document.visibilityState !== "visible" || !stickBottom.current ||
+          lastReadMessageRef.current === id) return;
+      readInFlight.current = true;
+      let succeeded = false;
+      try {
+        const response = await fetch(`/api/conversations/${conversation.id}/read`, {
+          method: "POST", signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message_id: id }),
+        });
+        if (!response.ok) throw new Error("Couldn't mark messages as read.");
+        if (signal.aborted) return;
+        lastReadMessageRef.current = id;
+        onRead?.(conversation.id, cursor.created_at);
+        succeeded = true;
+      } catch {
+        if (!signal.aborted) toast.error("Couldn't mark messages as read. Reopen the conversation to retry.");
+      } finally {
+        readInFlight.current = false;
+        if (succeeded && latestMessageRef.current !== id) void readVisibleMessages();
+      }
+    }
+    void readVisibleMessages();
+  }, [conversation.id, onRead]);
 
   useEffect(() => {
-    markRead();
+    latestMessageRef.current = messages.at(-1)?.id ?? null;
+    latestCursorRef.current = messages.at(-1) ?? null;
+    if (!loading) {
+      if (latestCursorRef.current && synchronizedCursor.current && compareCursor(latestCursorRef.current, synchronizedCursor.current) > 0) {
+        void recoverMessages().then(markRead);
+      } else markRead();
+    }
+  }, [messages, loading, markRead, recoverMessages]);
+
+  useEffect(() => {
+    document.addEventListener("visibilitychange", markRead);
+    return () => document.removeEventListener("visibilitychange", markRead);
   }, [markRead]);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void recoverMessages().then(markRead); };
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("online", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [recoverMessages, markRead]);
 
   // Load initial member last_read_at + subscribe to changes
   useEffect(() => {
@@ -272,7 +357,6 @@ function MessageThreadContent({
             const page: Message[] = await response.json();
             if (signal.aborted) return;
             setMessages((previous) => mergeMessages(previous, page));
-            markRead();
           } catch { if (!signal.aborted) toast.error("Couldn't refresh message. Reopen this conversation to retry."); }
         }
       )
@@ -310,18 +394,18 @@ function MessageThreadContent({
           );
         }
       )
-      .subscribe();
+      .subscribe(status => { if (status === "SUBSCRIBED") void recoverMessages().then(markRead); });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation.id, currentUser.id, markRead]);
+  }, [conversation.id, currentUser.id, recoverMessages, markRead]);
 
   // Typing presence channel
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase.channel(`typing:${conversation.id}`, {
-      config: { presence: { key: currentUser.id } },
+      config: { private: true, presence: { key: currentUser.id } },
     });
     typingChannelRef.current = channel;
 
@@ -406,8 +490,9 @@ function MessageThreadContent({
     if (nearBottom) markRead();
   }
 
-  async function handleSend(content: string) {
+  async function handleSend(content: string): Promise<boolean> {
     stopTyping();
+    try {
     const res = await fetch(
       `/api/conversations/${conversation.id}/messages`,
       {
@@ -419,7 +504,7 @@ function MessageThreadContent({
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       toast.error(j?.error || "Couldn't send message.");
-      return;
+      return false;
     }
     const msg: Message = await res.json();
     setMessages((prev) =>
@@ -429,9 +514,15 @@ function MessageThreadContent({
     );
     stickBottom.current = true;
     onMessageSent();
+    return true;
+    } catch {
+      toast.error("Connection lost. Your message is still here; try sending again.");
+      return false;
+    }
   }
 
-  async function handleUpload(file: File) {
+  async function handleUpload(file: File): Promise<boolean> {
+    try {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch(
@@ -441,7 +532,7 @@ function MessageThreadContent({
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       toast.error(j?.error || "Upload failed.");
-      return;
+      return false;
     }
     const msg: Message = await res.json();
     setMessages((prev) =>
@@ -451,35 +542,42 @@ function MessageThreadContent({
     );
     stickBottom.current = true;
     onMessageSent();
+    return true;
+    } catch {
+      toast.error("Connection lost. Your attachment is still here; try uploading again.");
+      return false;
+    }
   }
 
   async function toggleReaction(messageId: string, emoji: string) {
-    const res = await fetch(`/api/messages/${messageId}/reactions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ emoji }),
+    const key = `${messageId}:${emoji}`;
+    // Preserve every click, but serialize toggles so older responses cannot
+    // overwrite the result of a later toggle.
+    const pending = (reactionRequests.current.get(key) ?? Promise.resolve()).then(async () => {
+      const signal = requestController.current?.signal;
+      if (!signal || signal.aborted) return;
+      try {
+        const res = await fetch(`/api/messages/${messageId}/reactions`, {
+          method: "POST", signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emoji }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j?.error || "Couldn't react.");
+        }
+        const result: { action?: string } = await res.json();
+        if (result.action !== "added" && result.action !== "removed") throw new Error("Couldn't confirm the reaction. Reopen the conversation to refresh.");
+        if (signal.aborted) return;
+        setMessages(previous => previous.map(m => m.id === messageId
+          ? applyReaction(m, emoji, currentUser.id, result.action === "added" ? "add" : "remove") : m));
+      } catch (error) {
+        if (!signal.aborted) toast.error(error instanceof Error ? error.message : "Couldn't react. Try again.");
+      }
     });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast.error(j?.error || "Couldn't react.");
-      return;
-    }
-    // realtime echo also updates; optimistic local update too
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId) return m;
-        const has =
-          m.reactions?.some(
-            (r) => r.emoji === emoji && r.user_ids.includes(currentUser.id)
-          ) ?? false;
-        return applyReaction(
-          m,
-          emoji,
-          currentUser.id,
-          has ? "remove" : "add"
-        );
-      })
-    );
+    reactionRequests.current.set(key, pending);
+    await pending;
+    if (reactionRequests.current.get(key) === pending) reactionRequests.current.delete(key);
   }
 
   // Drag & drop

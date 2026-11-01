@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // POST /api/conversations/[id]/read — mark conversation read
 export async function POST(
-  _request: Request,
+  request: Request,
   ctx: { params: Promise<{ conversationId: string }> }
 ) {
   const { conversationId } = await ctx.params;
@@ -14,13 +14,16 @@ export async function POST(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase
-    .from("conversation_members")
-    .update({ last_read_at: new Date().toISOString() })
-    .eq("conversation_id", conversationId)
-    .eq("user_id", user.id);
+  const body = await request.json().catch(() => null);
+  const messageId = body?.message_id;
+  if (messageId != null && (typeof messageId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId))) {
+    return NextResponse.json({ error: "Invalid message" }, { status: 400 });
+  }
+  const { error } = await supabase.rpc("mark_conversation_read", {
+    p_conversation_id: conversationId, p_message_id: messageId ?? null,
+  });
 
   if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: error.code === "42501" ? 403 : error.code === "22023" ? 400 : 500 });
   return NextResponse.json({ ok: true });
 }
