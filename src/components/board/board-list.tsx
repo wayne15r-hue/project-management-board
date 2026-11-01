@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,9 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
   const setView = (value: ViewMode) => writePreference(VIEW_KEY, value);
   const setSort = (value: SortKey) => writePreference(SORT_KEY, value);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const createRequested = searchParams.get("new") === "true";
   const supabase = createClient();
 
   // Load favorites
@@ -98,15 +101,11 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
     (async () => {
       try {
         const res = await fetch("/api/boards/favorites");
-        if (!res.ok) return;
+        if (!res.ok) throw new Error("Failed to load board favorites");
         const data = await res.json();
         setFavorites(new Set(data.boardIds ?? []));
       } catch {
-        // fall back to localStorage
-        try {
-          const local = localStorage.getItem("pm-board-favorites");
-          if (local) setFavorites(new Set(JSON.parse(local)));
-        } catch {}
+        toast.error("Failed to load board favorites");
       }
     })();
   }, []);
@@ -118,16 +117,20 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
     else next.delete(boardId);
     setFavorites(next);
     try {
-      await fetch("/api/boards/favorites", {
+      const res = await fetch("/api/boards/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boardId, favorite: willFavorite }),
       });
+      if (!res.ok) throw new Error("Failed to save board favorite");
     } catch {
-      localStorage.setItem(
-        "pm-board-favorites",
-        JSON.stringify(Array.from(next))
-      );
+      setFavorites((current) => {
+        const reverted = new Set(current);
+        if (willFavorite) reverted.delete(boardId);
+        else reverted.add(boardId);
+        return reverted;
+      });
+      toast.error("Failed to save board favorite");
     }
   }
 
@@ -223,16 +226,27 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
     return list;
   }, [boards, query, sort, favorites, boardStats]);
 
+  const compactCreate = view === "list" || (boards.length > 0 && filteredSorted.length === 0);
   const createDialog = (
     <Dialog
-      open={open}
+      open={open || createRequested}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) resetForm();
+        if (!next) {
+          resetForm();
+          if (createRequested) {
+            const remaining = new URLSearchParams(searchParams.toString());
+            remaining.delete("new");
+            router.replace(`${pathname}${remaining.size ? `?${remaining}` : ""}`, { scroll: false });
+          }
+        }
       }}
     >
-      <DialogTrigger className="flex min-h-[148px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-transparent text-muted-foreground transition hover:border-muted-foreground/50 hover:bg-muted/40 hover:text-foreground">
-        <div className="flex flex-col items-center gap-1.5">
+      <DialogTrigger className={cn(
+        "cursor-pointer items-center justify-center border border-border text-muted-foreground transition hover:bg-muted/40 hover:text-foreground",
+        compactCreate ? "inline-flex h-9 rounded-md bg-card px-3" : "flex min-h-[148px] flex-col rounded-lg border-2 border-dashed bg-transparent hover:border-muted-foreground/50"
+      )}>
+        <div className={cn("flex items-center gap-1.5", !compactCreate && "flex-col")}>
           <Plus className="h-5 w-5" />
           <span className="text-[13px] font-medium">New board</span>
         </div>
@@ -411,6 +425,7 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
             </button>
           </div>
         </div>
+        {compactCreate && createDialog}
       </div>
 
       {filteredSorted.length === 0 ? (

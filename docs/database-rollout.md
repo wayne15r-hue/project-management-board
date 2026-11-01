@@ -1,5 +1,11 @@
 # Audit hardening rollout
 
+## Follow-up repairs for existing deployments
+
+After hardening, apply `20261101_board_creation.sql` and then `20261101_personalization_repair.sql`. The board repair replaces the recursive deployed SELECT-policy variant and supports INSERT RETURNING. The personalization repair adds missing `cards.cover_color` and `board_favorites` objects without replacing task records or replaying historical storage policies. It reinstalls user-private favorite policies, grants only SELECT/INSERT/DELETE to authenticated clients, removes inherited client TRUNCATE privileges, and requests a PostgREST schema-cache reload. Both follow-ups can be repeated safely, but normal migration tracking should still record their application.
+
+Deploy the matching application update with these repairs. Favorite creation now uses ON CONFLICT DO NOTHING (`ignoreDuplicates`) so repeated requests need no UPDATE privilege. Verify status moves and covers from Board/Table view, persisted favorites after refresh, sidebar/List board creation, and first/subsequent task creation from Table view.
+
 This is an operator procedure for a future staging/production rollout. Local tests do not apply SQL to a live project.
 
 ## Prepare

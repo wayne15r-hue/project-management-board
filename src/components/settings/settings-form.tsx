@@ -49,7 +49,7 @@ export function SettingsForm({
   initialAvatarUrl,
   initialEmailNotifications = true,
   aiConfigured = false,
-  aiModel = "llama-3.3-70b-versatile",
+  aiModel = "openai/gpt-oss-120b",
   usage = [],
 }: SettingsFormProps) {
   const router = useRouter();

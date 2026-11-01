@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { format, isPast, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ArrowUp, ArrowDown, Plus, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,6 +47,11 @@ function newId() {
 export function TableView({ board, members, onRefresh }: TableViewProps) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newColumnId, setNewColumnId] = useState("");
+  const creationColumn = board.columns.find((column) => column.id === newColumnId) ?? board.columns[0];
 
   const filters = useBoardStore((s) => s.filters);
   const sorts = useBoardStore((s) => s.sorts);
@@ -85,6 +91,28 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
       updateSort(existing.id, { dir: "desc" });
     } else {
       removeSort(existing.id);
+    }
+  }
+
+  async function handleCreateCard(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newTitle.trim() || !creationColumn || creating) return;
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/boards/${board.id}/cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columnId: creationColumn.id, title: newTitle.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to create task");
+      onRefresh();
+      setNewTitle("");
+      setAdding(false);
+      toast.success("Card created");
+    } catch {
+      toast.error("Failed to create task. Your draft is ready to retry.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -180,7 +208,7 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
                       <p className="mt-0.5 text-[12px] text-muted-foreground">
                         {viewActive
                           ? "Try adjusting or clearing active filters."
-                          : "Create a card on the Board view to get started."}
+                          : "Use New below to create your first task."}
                       </p>
                     </div>
                     {viewActive && (
@@ -322,29 +350,58 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
                 );
               })
             )}
-            {flatCards.length > 0 && (
               <tr>
                 <td
                   colSpan={headers.length}
                   className="px-3 py-2 text-[12px] text-muted-foreground"
                 >
-                  <button
+                  {adding ? (
+                    <form onSubmit={handleCreateCard} className="flex flex-wrap items-center gap-2 py-1">
+                      <Input
+                        aria-label="Task title"
+                        placeholder="Task title"
+                        value={newTitle}
+                        onChange={(event) => setNewTitle(event.target.value)}
+                        maxLength={200}
+                        required
+                        autoFocus
+                        disabled={creating}
+                        className="h-9 min-w-48 flex-1"
+                      />
+                      <select
+                        aria-label="Column"
+                        value={creationColumn?.id ?? ""}
+                        onChange={(event) => setNewColumnId(event.target.value)}
+                        disabled={creating}
+                        className="h-9 rounded-md border border-border bg-background px-2 text-[12px]"
+                      >
+                        {board.columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}
+                      </select>
+                      <Button type="submit" size="sm" disabled={creating || !newTitle.trim() || !creationColumn}>
+                        {creating ? "Creating…" : "Create task"}
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" disabled={creating} onClick={() => { setAdding(false); setNewTitle(""); }}>
+                        Cancel
+                      </Button>
+                    </form>
+                  ) : <button
                     type="button"
                     className="flex items-center gap-1 rounded-md px-1 py-0.5 hover:text-foreground"
-                    disabled
+                    disabled={!creationColumn}
+                    onClick={() => setAdding(true)}
                   >
                     <Plus className="h-3.5 w-3.5" />
                     New
-                  </button>
+                  </button>}
                 </td>
               </tr>
-            )}
           </tbody>
         </table>
       </div>
 
       <CardDetailDialog
         card={selectedCard}
+        board={board}
         columns={board.columns}
         members={members}
         open={dialogOpen}

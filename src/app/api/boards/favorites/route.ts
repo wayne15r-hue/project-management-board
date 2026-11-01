@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (favorite) {
     const { error } = await supabase
       .from("board_favorites")
-      .upsert({ user_id: user.id, board_id: boardId });
+      .upsert({ user_id: user.id, board_id: boardId }, { ignoreDuplicates: true });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
     const { error } = await supabase
