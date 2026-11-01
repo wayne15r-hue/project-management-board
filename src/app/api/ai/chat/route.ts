@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  AI_MODEL,
   AIError,
   aiConfigured,
   aiErrorResponse,
-  getGroqClient,
+  completeAI,
 } from "@/lib/ai/client";
 import { CHAT_SYSTEM } from "@/lib/ai/chat-prompt";
 
@@ -27,7 +26,8 @@ export async function POST(request: Request) {
     boardId,
   }: { messages: ChatMsg[]; boardId?: string } = await request.json();
 
-  if (!Array.isArray(messages) || messages.length === 0) {
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50 ||
+      messages.some((m) => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || m.content.length > 10000)) {
     return NextResponse.json({ error: "Missing messages" }, { status: 400 });
   }
 
@@ -39,25 +39,6 @@ export async function POST(request: Request) {
     );
     const { status, body } = aiErrorResponse(err);
     return NextResponse.json(body, { status });
-  }
-
-  // Daily limit check
-  const since = new Date();
-  since.setUTCHours(0, 0, 0, 0);
-  const { count, error: usageError } = await supabase
-    .from("ai_usage")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", since.toISOString());
-  if (usageError) {
-    console.error('[ai/chat POST] usage count query failed:', usageError);
-    return NextResponse.json({ error: usageError.message }, { status: 500 });
-  }
-  if ((count ?? 0) >= 50) {
-    return NextResponse.json(
-      { error: "Daily AI limit reached. Resets tomorrow.", code: "daily_limit" },
-      { status: 429 }
-    );
   }
 
   let boardName: string | null = null;
@@ -111,11 +92,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = getGroqClient();
-    const response = await client.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      temperature: 0.7,
+    const text = await completeAI({
+      userId: user.id,
+      feature: "chat",
+      maxTokens: 1024,
       messages: [
         {
           role: "system",
@@ -129,34 +109,9 @@ export async function POST(request: Request) {
       ],
     });
 
-    try {
-      await supabase.from("ai_usage").insert({
-        user_id: user.id,
-        feature: "chat",
-        input_tokens: response.usage?.prompt_tokens ?? 0,
-        output_tokens: response.usage?.completion_tokens ?? 0,
-        model: AI_MODEL,
-      });
-    } catch {
-      /* ignore */
-    }
-
-    const text = response.choices[0]?.message?.content ?? "";
     return NextResponse.json({ text });
   } catch (err: unknown) {
-    const e = err as { status?: number; message?: string };
-    if (e?.status === 429) {
-      return NextResponse.json(
-        {
-          error: "The AI service is rate-limited. Try again shortly.",
-          code: "rate_limited",
-        },
-        { status: 429 }
-      );
-    }
-    return NextResponse.json(
-      { error: e?.message || "Chat failed", code: "unknown" },
-      { status: 500 }
-    );
+    const { status, body } = aiErrorResponse(err);
+    return NextResponse.json(body, { status });
   }
 }

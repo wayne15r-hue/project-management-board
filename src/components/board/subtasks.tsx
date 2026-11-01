@@ -18,8 +18,10 @@ export function Subtasks({ cardId }: SubtasksProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    fetch(`/api/cards/${cardId}/subtasks`)
+    Promise.resolve().then(() => {
+      setLoading(true);
+      return fetch(`/api/cards/${cardId}/subtasks`);
+    })
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) setItems(data || []);
@@ -81,12 +83,14 @@ export function Subtasks({ cardId }: SubtasksProps) {
       prev.map((x) => (x.id === s.id ? { ...x, title: trimmed } : x))
     );
     try {
-      await fetch(`/api/cards/${cardId}/subtasks`, {
+      const res = await fetch(`/api/cards/${cardId}/subtasks`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: s.id, title: trimmed }),
       });
+      if (!res.ok) throw new Error("Failed to rename subtask");
     } catch {
+      setItems(prev => prev.map(item => item.id === s.id ? s : item));
       toast.error("Failed to rename subtask");
     }
   }
@@ -95,11 +99,12 @@ export function Subtasks({ cardId }: SubtasksProps) {
     const prev = items;
     setItems((p) => p.filter((x) => x.id !== id));
     try {
-      await fetch(`/api/cards/${cardId}/subtasks`, {
+      const res = await fetch(`/api/cards/${cardId}/subtasks`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
+      if (!res.ok) throw new Error("Failed to delete subtask");
     } catch {
       setItems(prev);
       toast.error("Failed to delete subtask");
@@ -174,9 +179,11 @@ function SubtaskRow({
 }) {
   const [title, setTitle] = useState(subtask.title);
 
-  useEffect(() => {
+  const [previousTitle, setPreviousTitle] = useState(subtask.title);
+  if (subtask.title !== previousTitle) {
+    setPreviousTitle(subtask.title);
     setTitle(subtask.title);
-  }, [subtask.title]);
+  }
 
   return (
     <li className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/40">

@@ -10,7 +10,17 @@ function getResend(): Resend {
 }
 
 const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const FROM = "ProjectBoard <onboarding@resend.dev>";
+async function sendEmail(payload: { to: string; subject: string; html: string }, idempotencyKey?: string) {
+  const from = process.env.RESEND_FROM?.trim();
+  if (!from) throw new Error("RESEND_FROM must be a verified sending-domain address");
+  if (!process.env.RESEND_API_KEY?.trim()) throw new Error("RESEND_API_KEY is not configured");
+  const { data, error } = await getResend().emails.send(
+    { ...payload, from }, idempotencyKey ? { idempotencyKey } : undefined
+  );
+  if (error) throw new Error(`Email rejected: ${error.message}`);
+  if (!data?.id) throw new Error("Email provider returned no delivery id");
+  return data.id;
+}
 
 function escapeHtml(s: string): string {
   return s
@@ -78,7 +88,6 @@ export async function sendCardAssignedEmail(params: {
   priority: string;
   dueDate?: string | null;
 }) {
-  const resend = getResend();
   const boardUrl = `${APP_URL()}/dashboard/board/${params.boardId}`;
 
   const html = layout(`
@@ -88,14 +97,13 @@ export async function sendCardAssignedEmail(params: {
       <p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#37352F;">${params.cardTitle}</p>
       <p style="margin:0;font-size:13px;color:#787774;">
         ${priorityBadge(params.priority)}
-        ${params.dueDate ? `&nbsp;&middot;&nbsp;Due ${new Date(params.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}
+        ${params.dueDate ? `&nbsp;&middot;&nbsp;Due ${new Date(params.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}
       </p>
     </div>
     <p>${button("View Board", boardUrl)}</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `You've been assigned to "${params.cardTitle}" on ${params.boardName}`,
     html,
@@ -110,8 +118,8 @@ export async function sendDueDateReminderEmail(params: {
   priority: string;
   dueDate: string;
   urgency: "tomorrow" | "today" | "overdue";
+  idempotencyKey?: string;
 }) {
-  const resend = getResend();
   const boardUrl = `${APP_URL()}/dashboard/board/${params.boardId}`;
 
   const urgencyText: Record<string, string> = {
@@ -135,18 +143,17 @@ export async function sendDueDateReminderEmail(params: {
         &nbsp;&middot;&nbsp;
         ${priorityBadge(params.priority)}
         &nbsp;&middot;&nbsp;
-        <span style="color:#787774;">${new Date(params.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+        <span style="color:#787774;">${new Date(params.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
       </p>
     </div>
     <p>${button("View Board", boardUrl)}</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `"${params.cardTitle}" ${urgencyText[params.urgency]}`,
     html,
-  });
+  }, params.idempotencyKey);
 }
 
 export async function sendCommentNotificationEmail(params: {
@@ -157,7 +164,6 @@ export async function sendCommentNotificationEmail(params: {
   cardTitle: string;
   boardId: string;
 }) {
-  const resend = getResend();
   const boardUrl = `${APP_URL()}/dashboard/board/${params.boardId}`;
 
   const html = layout(`
@@ -170,8 +176,7 @@ export async function sendCommentNotificationEmail(params: {
     <p>${button("View Card", boardUrl)}</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `${params.commenterName} commented on "${params.cardTitle}"`,
     html,
@@ -186,7 +191,6 @@ export async function sendAssignmentNotificationEmail(params: {
   boardId: string;
   cardId: string;
 }) {
-  const resend = getResend();
   const cardUrl = `${APP_URL()}/dashboard/board/${params.boardId}?card=${params.cardId}`;
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:20px;color:#37352F;">${escapeHtml(params.actorName)} assigned you a card</h2>
@@ -198,8 +202,7 @@ export async function sendAssignmentNotificationEmail(params: {
     <p style="margin-top:24px;color:#787774;font-size:12px;">You received this because someone assigned a card to you. You can disable email notifications in Settings.</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `${params.actorName} assigned you "${params.cardTitle}"`,
     html,
@@ -215,7 +218,6 @@ export async function sendMentionNotificationEmail(params: {
   boardId: string;
   cardId: string;
 }) {
-  const resend = getResend();
   const cardUrl = `${APP_URL()}/dashboard/board/${params.boardId}?card=${params.cardId}`;
   const truncated =
     params.commentText.length > 300
@@ -231,8 +233,7 @@ export async function sendMentionNotificationEmail(params: {
     <p style="margin-top:24px;color:#787774;font-size:12px;">You received this because someone @mentioned you. You can disable email notifications in Settings.</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `${params.actorName} mentioned you in "${params.cardTitle}"`,
     html,
@@ -245,7 +246,6 @@ export async function sendTeamInviteEmail(params: {
   inviterName: string;
   inviteToken: string;
 }) {
-  const resend = getResend();
   const inviteUrl = `${APP_URL()}/invite/${params.inviteToken}`;
 
   const html = layout(`
@@ -260,8 +260,7 @@ export async function sendTeamInviteEmail(params: {
     <p style="margin-top:16px;color:#787774;font-size:12px;">This invitation expires in 7 days.</p>
   `);
 
-  await resend.emails.send({
-    from: FROM,
+  await sendEmail({
     to: params.to,
     subject: `You've been invited to join ${params.teamName} on ProjectBoard`,
     html,

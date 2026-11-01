@@ -87,7 +87,7 @@ const COVER_COLORS: { value: string; label: string }[] = [
   { value: "#6B9EAE", label: "Teal" },
 ];
 
-type SaveStatus = "idle" | "saving" | "saved";
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function CardDetailDialog({
   card,
@@ -114,13 +114,21 @@ export function CardDetailDialog({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
 
   const lastCardId = useRef<string | null>(null);
+  const failedUpdates = useRef<Partial<Card>>({});
+  const saveSequence = useRef(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (card && card.id !== lastCardId.current) {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      failedUpdates.current = {};
+      saveSequence.current += 1;
       setTitle(card.title);
       setDescription(card.description || "");
       setPriority(card.priority);
@@ -136,6 +144,7 @@ export function CardDetailDialog({
           .filter((l): l is Label => !!l)
       );
       setConfirmDelete(false);
+      setDeleteError(false);
       setSaveStatus("idle");
       lastCardId.current = card.id;
     }
@@ -145,21 +154,35 @@ export function CardDetailDialog({
   const performSave = useCallback(
     async (updates: Partial<Card>) => {
       if (!card) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      failedUpdates.current = { ...failedUpdates.current, ...updates };
+      const sequence = ++saveSequence.current;
+      const cardId = card.id;
+      const payload = { ...failedUpdates.current };
       setSaveStatus("saving");
-      try {
-        await onUpdate(card.id, updates);
-        setSaveStatus("saved");
-        if (savedTimer.current) clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaveStatus("idle"), 1500);
-      } catch {
-        setSaveStatus("idle");
-      }
+      const request = saveQueue.current.then(async () => {
+        try {
+          await onUpdate(cardId, payload);
+          if (lastCardId.current !== cardId || sequence !== saveSequence.current) return;
+          failedUpdates.current = {};
+          setSaveStatus("saved");
+          savedTimer.current = setTimeout(() => setSaveStatus("idle"), 1500);
+        } catch {
+          if (lastCardId.current === cardId && sequence === saveSequence.current) setSaveStatus("error");
+        }
+      });
+      saveQueue.current = request;
+      await request;
     },
     [card, onUpdate]
   );
 
   const debouncedSave = useCallback(
     (updates: Partial<Card>) => {
+      failedUpdates.current = { ...failedUpdates.current, ...updates };
+      saveSequence.current += 1;
+      if (savedTimer.current) clearTimeout(savedTimer.current);
       setSaveStatus("saving");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => performSave(updates), 500);
@@ -244,9 +267,12 @@ export function CardDetailDialog({
       return;
     }
     setDeleting(true);
+    setDeleteError(false);
     try {
       await onDelete(card!.id);
       onOpenChange(false);
+    } catch {
+      setDeleteError(true);
     } finally {
       setDeleting(false);
     }
@@ -267,7 +293,10 @@ export function CardDetailDialog({
                 {currentColumn?.name ?? "—"}
               </span>
             </p>
-            <SaveIndicator status={saveStatus} />
+            <div className="flex items-center gap-2">
+              <SaveIndicator status={saveStatus} />
+              {saveStatus === "error" && <button type="button" className="text-[11px] underline" onClick={() => performSave(failedUpdates.current)}>Retry</button>}
+            </div>
           </div>
           <input
             value={title}
@@ -603,6 +632,8 @@ export function CardDetailDialog({
           {/* Activity */}
           <ActivityFeed cardId={card.id} />
 
+          {deleteError && <p role="alert" className="mt-4 text-[12px] text-destructive">Delete failed. Try again.</p>}
+
           {/* Footer */}
           <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
             <p className="text-[11px] text-muted-foreground">
@@ -654,7 +685,7 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
         status === "saved" ? "text-muted-foreground" : "text-muted-foreground"
       )}
     >
-      {status === "saving" ? "Saving…" : "Saved"}
+      {status === "saving" ? "Saving…" : status === "error" ? "Save failed" : "Saved"}
     </span>
   );
 }

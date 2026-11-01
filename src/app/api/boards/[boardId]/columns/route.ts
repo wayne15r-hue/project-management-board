@@ -97,39 +97,12 @@ export async function DELETE(
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  // Check that it's not the last column
-  const { data: columns, error: columnsError } = await supabase
-    .from("columns")
-    .select("id")
-    .eq("board_id", boardId);
-
-  if (columnsError) {
-    console.error('[boards/[boardId]/columns DELETE] columns query failed:', columnsError);
-    return NextResponse.json({ error: columnsError.message }, { status: 500 });
-  }
-
-  if (columns && columns.length <= 1) {
-    return NextResponse.json(
-      { error: "Cannot delete the last column" },
-      { status: 400 }
-    );
-  }
-
-  // Move cards to the first remaining column
-  const firstOtherCol = columns?.find((c) => c.id !== parsed.data.columnId);
-  if (firstOtherCol) {
-    await supabase
-      .from("cards")
-      .update({ column_id: firstOtherCol.id })
-      .eq("column_id", parsed.data.columnId);
-  }
-
-  const { error } = await supabase
-    .from("columns")
-    .delete()
-    .eq("id", parsed.data.columnId)
-    .eq("board_id", boardId);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error } = await supabase.rpc("delete_board_column", {
+    p_board_id: boardId,
+    p_column_id: parsed.data.columnId,
+  });
+  if (error) return NextResponse.json({ error: error.message }, {
+    status: error.code === "42501" ? 403 : error.code === "22023" ? 400 : 500,
+  });
   return NextResponse.json({ success: true });
 }

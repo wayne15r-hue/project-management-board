@@ -3,11 +3,13 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import {
   ArrowLeft,
   Trash2,
@@ -52,6 +54,12 @@ interface PresenceState {
   typing: boolean;
 }
 
+function mergeMessages(previous: Message[], incoming: Message[]): Message[] {
+  const merged = new Map(previous.map((message) => [message.id, message]));
+  for (const message of incoming) merged.set(message.id, message);
+  return [...merged.values()].sort((left, right) => left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id));
+}
+
 function titleOf(conversation: Conversation, currentUserId: string) {
   if (conversation.name) return conversation.name;
   const others = conversation.members.filter((m) => m.id !== currentUserId);
@@ -89,7 +97,11 @@ function shouldGroup(prev: Message | null, next: Message): boolean {
   );
 }
 
-export function MessageThread({
+export function MessageThread(props: Props) {
+  return <MessageThreadContent key={props.conversation.id} {...props} />;
+}
+
+function MessageThreadContent({
   conversation,
   currentUser,
   onBack,
@@ -98,6 +110,11 @@ export function MessageThread({
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
+  const olderInFlight = useRef(false);
+  const scrollAnchor = useRef<{ height: number; top: number } | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [lightbox, setLightbox] = useState<Message | null>(null);
   const [typingUsers, setTypingUsers] = useState<PresenceState[]>([]);
@@ -119,21 +136,56 @@ export function MessageThread({
     [conversation.members, currentUser.id]
   );
 
-  const loadMessages = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch(
-      `/api/conversations/${conversation.id}/messages?limit=50`
-    );
-    if (res.ok) {
-      const data: Message[] = await res.json();
-      setMessages(data);
-    }
-    setLoading(false);
+  const loadMessages = useCallback((signal: AbortSignal) => {
+    return fetch(`/api/conversations/${conversation.id}/messages?limit=50`, { signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Couldn't load messages.");
+        const page: Message[] = await response.json();
+        if (signal.aborted) return;
+        setMessages((previous) => mergeMessages(previous, page));
+        setHasOlder((previous) => previous || page.length === 50);
+      }).catch((error) => {
+        if (!signal.aborted) toast.error(error instanceof Error ? error.message : "Couldn't load messages.");
+      }).finally(() => { if (!signal.aborted) setLoading(false); });
   }, [conversation.id]);
 
   useEffect(() => {
-    loadMessages();
+    const controller = new AbortController();
+    requestController.current = controller;
+    void loadMessages(controller.signal);
+    return () => { controller.abort(); };
   }, [loadMessages]);
+
+  async function loadOlder() {
+    const oldest = messages[0];
+    const signal = requestController.current?.signal;
+    if (!oldest || !hasOlder || olderInFlight.current || !signal || signal.aborted) return;
+    olderInFlight.current = true; setLoadingOlder(true);
+    try {
+      const params = new URLSearchParams({ limit: "50", before: oldest.created_at, before_id: oldest.id });
+      const response = await fetch(`/api/conversations/${conversation.id}/messages?${params}`, { signal });
+      if (!response.ok) throw new Error("Couldn't load older messages.");
+      const page: Message[] = await response.json();
+      if (signal.aborted) return;
+      const element = scrollRef.current;
+      if (element) scrollAnchor.current = { height: element.scrollHeight, top: element.scrollTop };
+      stickBottom.current = false;
+      setMessages((previous) => mergeMessages(previous, page));
+      setHasOlder(page.length === 50);
+    } catch (error) {
+      if (!signal.aborted) toast.error(error instanceof Error ? error.message : "Couldn't load older messages.");
+    } finally {
+      olderInFlight.current = false;
+      if (!signal.aborted) setLoadingOlder(false);
+    }
+  }
+  useLayoutEffect(() => {
+    const element = scrollRef.current, anchor = scrollAnchor.current;
+    if (element && anchor) {
+      element.scrollTop = anchor.top + element.scrollHeight - anchor.height;
+      scrollAnchor.current = null;
+    }
+  }, [messages]);
 
   const markRead = useCallback(() => {
     const now = Date.now();
@@ -209,21 +261,19 @@ export function MessageThread({
           filter: `conversation_id=eq.${conversation.id}`,
         },
         async (payload) => {
+          const signal = requestController.current?.signal;
           const row = payload.new as Message;
-          if (row.sender_id === currentUser.id) return;
-          const { data: sender } = await supabase
-            .from("profiles")
-            .select("id, full_name, email, avatar_url")
-            .eq("id", row.sender_id)
-            .single();
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === row.id)) return prev;
-            return [
-              ...prev,
-              { ...row, sender: sender ?? null, reactions: [] },
-            ];
-          });
-          markRead();
+          if (!signal || signal.aborted || row.sender_id === currentUser.id) return;
+          try {
+            // Fetch this exact event through the signing boundary. A busy burst
+            // must not replace history with a globally bounded newest page.
+            const response = await fetch(`/api/conversations/${conversation.id}/messages?message_id=${encodeURIComponent(row.id)}`, { signal });
+            if (!response.ok) throw new Error("Couldn't refresh message.");
+            const page: Message[] = await response.json();
+            if (signal.aborted) return;
+            setMessages((previous) => mergeMessages(previous, page));
+            markRead();
+          } catch { if (!signal.aborted) toast.error("Couldn't refresh message. Reopen this conversation to retry."); }
         }
       )
       .on(
@@ -547,6 +597,7 @@ export function MessageThread({
             Drop file to attach
           </div>
         )}
+        {!loading && hasOlder && <button type="button" onClick={loadOlder} disabled={loadingOlder} className="mx-auto mb-3 block text-xs text-muted-foreground hover:underline">{loadingOlder ? "Loading older messages…" : "Load older messages"}</button>}
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -741,7 +792,7 @@ function MessageBubble({
         onClick={onOpenImage}
         className="block overflow-hidden rounded-2xl border border-border bg-background"
       >
-        <img
+        <Image unoptimized width={300} height={300} style={{ width: "auto", height: "auto" }}
           src={message.file_url}
           alt={message.file_name ?? "image"}
           className="block max-h-[300px] max-w-[300px] object-cover"
@@ -959,7 +1010,7 @@ function ImageLightbox({
           </div>
         </div>
         {message.file_url && (
-          <img
+          <Image unoptimized width={1920} height={1080} style={{ width: "auto", height: "auto" }}
             src={message.file_url}
             alt={message.file_name ?? ""}
             className="max-h-[80vh] max-w-[90vw] rounded object-contain"

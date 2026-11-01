@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { Send, Paperclip, X, FileIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +98,7 @@ export function MessageInput({
       {pendingFile && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-background p-2">
           {preview ? (
-            <img
+            <Image unoptimized width={48} height={48}
               src={preview}
               alt=""
               className="h-12 w-12 shrink-0 rounded object-cover"

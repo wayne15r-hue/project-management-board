@@ -42,8 +42,10 @@ export function LabelPicker({
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    fetch(`/api/boards/${boardId}/labels`)
+    Promise.resolve().then(() => {
+      setLoading(true);
+      return fetch(`/api/boards/${boardId}/labels`);
+    })
       .then((r) => r.json())
       .then((data) => setLabels(data || []))
       .finally(() => setLoading(false));

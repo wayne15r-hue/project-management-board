@@ -60,7 +60,7 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (data.assignee_id && data.assignee_id !== user.id) {
-    createNotification({
+    await createNotification({
       recipientId: data.assignee_id,
       actorId: user.id,
       type: "assignment",

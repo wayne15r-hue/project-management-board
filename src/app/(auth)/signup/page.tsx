@@ -33,6 +33,7 @@ export default function SignupPage() {
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationRequired, setConfirmationRequired] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -57,10 +58,10 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/callback?next=%2Fdashboard` },
     });
 
     if (error) {
@@ -69,9 +70,16 @@ export default function SignupPage() {
       return;
     }
 
+    if (!data.session) {
+      setConfirmationRequired(true);
+      setLoading(false);
+      return;
+    }
     router.push("/dashboard");
     router.refresh();
   }
+
+  if (confirmationRequired) return <div className="space-y-6"><h1 className="text-[26px] font-bold">Check your email</h1><p>Confirm your email address using the link we sent before signing in.</p><Link href="/login" className="text-sm hover:underline">Back to sign in</Link></div>;
 
   return (
     <div className="space-y-6">

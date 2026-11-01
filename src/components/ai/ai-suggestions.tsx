@@ -40,20 +40,20 @@ export function AISuggestions({
   onApplyAssignee,
   onApplyLabel,
 }: Props) {
-  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [requestedSuggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const cacheKey = `${cardId}:${title}:${description.slice(0, 200)}`;
+  const suggestion = cache.get(cacheKey) ?? requestedSuggestion;
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const requestedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!title.trim() || dismissed) return;
-    const cacheKey = `${cardId}:${title}:${description.slice(0, 200)}`;
     if (requestedFor.current === cacheKey) return;
     requestedFor.current = cacheKey;
 
     const cached = cache.get(cacheKey);
     if (cached) {
-      setSuggestion(cached);
       return;
     }
 
@@ -77,7 +77,7 @@ export function AISuggestions({
     }, 600);
 
     return () => clearTimeout(t);
-  }, [cardId, boardId, title, description, dismissed]);
+  }, [cardId, boardId, title, description, dismissed, cacheKey]);
 
   if (dismissed || !suggestion) return null;
 

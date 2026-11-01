@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureBucket } from "@/lib/supabase/storage-setup";
 
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const BUCKET = "avatars";
 
 export async function POST(request: Request) {
@@ -18,15 +18,15 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
-  if (!file.type.startsWith("image/")) {
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
     return NextResponse.json(
-      { error: "Please upload an image file" },
+      { error: "Please upload a JPEG, PNG, WebP or GIF image" },
       { status: 400 }
     );
   }
   if (file.size > MAX_AVATAR_BYTES) {
     return NextResponse.json(
-      { error: "Image must be under 3MB" },
+      { error: "Image must be under 2MB" },
       { status: 400 }
     );
   }

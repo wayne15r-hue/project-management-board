@@ -87,8 +87,9 @@ export function CalendarView({ board, members, onRefresh }: CalendarViewProps) {
       });
       if (!res.ok) throw new Error();
       onRefresh();
-    } catch {
+    } catch (error) {
       toast.error("Failed to update card");
+      throw error;
     }
   }
 
@@ -98,8 +99,9 @@ export function CalendarView({ board, members, onRefresh }: CalendarViewProps) {
       if (!res.ok) throw new Error();
       onRefresh();
       setDialogOpen(false);
-    } catch {
+    } catch (error) {
       toast.error("Failed to delete card");
+      throw error;
     }
   }
 

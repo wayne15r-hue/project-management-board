@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -58,6 +59,7 @@ const views = [
 
 export function BoardHeader({ board, members, activeView, onViewChange, presence = [] }: BoardHeaderProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
   const [importOpen, setImportOpen] = useState(false);
@@ -75,10 +77,9 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   }
 
   async function handleSetTheme(theme: BoardBackground) {
-    const previous = board.background_theme ?? "default";
-    // Optimistic: reflect the change immediately in the rendered board object
-    // so the background flips before the server round-trip.
-    (board as { background_theme: BoardBackground }).background_theme = theme;
+    const key = ["board", board.id];
+    const previous = queryClient.getQueryData<BoardWithDetails>(key);
+    queryClient.setQueryData<BoardWithDetails>(key, current => current ? { ...current, background_theme: theme } : current);
     try {
       const res = await fetch(`/api/boards/${board.id}`, {
         method: "PATCH",
@@ -95,9 +96,9 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
               : `HTTP ${res.status}`;
         throw new Error(message);
       }
-      router.refresh();
+      await queryClient.invalidateQueries({ queryKey: key });
     } catch (err) {
-      (board as { background_theme: BoardBackground }).background_theme = previous;
+      if (previous) queryClient.setQueryData(key, previous);
       const message = err instanceof Error ? err.message : String(err);
       console.error("Failed to update background:", message);
       toast.error(`Couldn't update background: ${message}`);

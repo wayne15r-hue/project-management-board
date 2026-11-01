@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { signChatFile, parseMessageCursor, messagePageLimit } from "../../chat-files";
 
 // GET /api/conversations/[id]/messages?before=ISO&limit=50
 export async function GET(
@@ -15,8 +16,21 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
-  const before = url.searchParams.get("before");
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
+  const messageId = url.searchParams.get("message_id");
+  if (messageId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)) {
+    return NextResponse.json({ error: "Invalid message id" }, { status: 400 });
+  }
+  let cursor: ReturnType<typeof parseMessageCursor>;
+  let limit: number;
+  try {
+    cursor = parseMessageCursor(url.searchParams.get("before"), url.searchParams.get("before_id"));
+    limit = messagePageLimit(url.searchParams.get("limit"));
+  } catch {
+    return NextResponse.json({ error: "Invalid message pagination" }, { status: 400 });
+  }
+  const { data: member, error: membershipError } = await supabase.rpc("is_conversation_member", { conv_id: conversationId });
+  if (membershipError) return NextResponse.json({ error: "Membership check failed" }, { status: 500 });
+  if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   let query = supabase
     .from("messages")
@@ -26,8 +40,12 @@ export async function GET(
     .eq("conversation_id", conversationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(limit);
-  if (before) query = query.lt("created_at", before);
+  if (messageId) query = query.eq("id", messageId);
+  if (cursor?.beforeId) {
+    query = query.or(`created_at.lt.${cursor.before},and(created_at.eq.${cursor.before},id.lt.${cursor.beforeId})`);
+  } else if (cursor) query = query.lt("created_at", cursor.before);
 
   const { data, error } = await query;
   if (error) {
@@ -68,7 +86,11 @@ export async function GET(
     return { ...m, reactions: rx };
   });
 
-  return NextResponse.json(withRx);
+  try {
+    return NextResponse.json(await Promise.all(withRx.map((message) => signChatFile(supabase, conversationId, message))));
+  } catch {
+    return NextResponse.json({ error: "Could not refresh chat attachment links" }, { status: 502 });
+  }
 }
 
 // POST /api/conversations/[id]/messages
@@ -85,7 +107,10 @@ export async function POST(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || (body.message_type && body.message_type !== "text") || body.file_url) {
+    return NextResponse.json({ error: "Use the upload endpoint for attachments" }, { status: 400 });
+  }
   const content =
     typeof body?.content === "string" ? body.content.trim() : "";
   const messageType =

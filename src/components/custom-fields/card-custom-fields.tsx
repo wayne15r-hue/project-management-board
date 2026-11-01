@@ -14,7 +14,6 @@ interface CardCustomFieldsProps {
 
 export function CardCustomFields({
   cardId,
-  boardId,
   definitions,
 }: CardCustomFieldsProps) {
   const [values, setValues] = useState<Record<string, unknown>>({});

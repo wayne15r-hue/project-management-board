@@ -19,16 +19,10 @@ export function FieldRenderer({ definition, value }: FieldRendererProps) {
       return <span className="text-sm">{String(value)}</span>;
     case "number":
       return <span className="text-sm font-mono">{Number(value)}</span>;
-    case "date":
-      try {
-        return (
-          <span className="text-sm">
-            {format(new Date(String(value)), "MMM d, yyyy")}
-          </span>
-        );
-      } catch {
-        return <span className="text-sm">{String(value)}</span>;
-      }
+    case "date": {
+      const date = new Date(String(value));
+      return <span className="text-sm">{Number.isNaN(date.getTime()) ? String(value) : format(date, "MMM d, yyyy")}</span>;
+    }
     case "select":
       return (
         <Badge variant="secondary" className="text-xs font-normal">

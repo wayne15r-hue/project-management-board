@@ -37,20 +37,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const { data: team, error: teamError } = await supabase
-    .from("teams")
-    .insert({ name: parsed.data.name, created_by: user.id })
-    .select()
-    .single();
-
+  const { data: teamId, error: createError } = await supabase.rpc("create_team", {
+    p_name: parsed.data.name,
+  });
+  if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
+  const { data: team, error: teamError } = await supabase.from("teams").select("*").eq("id", teamId).single();
   if (teamError) return NextResponse.json({ error: teamError.message }, { status: 500 });
-
-  // Add creator as owner
-  const { error: memberError } = await supabase
-    .from("team_members")
-    .insert({ team_id: team.id, user_id: user.id, role: "owner" });
-
-  if (memberError) return NextResponse.json({ error: memberError.message }, { status: 500 });
 
   return NextResponse.json(team, { status: 201 });
 }

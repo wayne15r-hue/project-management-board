@@ -373,7 +373,6 @@ function PriorityDonut({
 }) {
   const radius = 56;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
 
   return (
     <div className="flex items-center gap-6">
@@ -388,12 +387,11 @@ function PriorityDonut({
             strokeWidth="14"
             className="text-muted opacity-40"
           />
-          {data.map((d) => {
+          {data.map((d, index) => {
             if (d.count === 0) return null;
             const len = (d.count / total) * circumference;
             const dasharray = `${len} ${circumference - len}`;
-            const dashoffset = -offset;
-            offset += len;
+            const dashoffset = -data.slice(0, index).reduce((sum, part) => sum + (part.count / total) * circumference, 0);
             return (
               <circle
                 key={d.key}
@@ -551,4 +549,3 @@ function TrendChart({
     </div>
   );
 }
-

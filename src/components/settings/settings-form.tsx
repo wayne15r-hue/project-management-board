@@ -40,7 +40,7 @@ interface SettingsFormProps {
 
 const DAILY_LIMIT = 50;
 
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024; // 3MB
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2MB
 
 export function SettingsForm({
   userId,
@@ -115,12 +115,12 @@ export function SettingsForm({
   }
 
   async function uploadFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Please upload a JPEG, PNG, WebP or GIF image");
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("Image must be under 3MB");
+      toast.error("Image must be under 2MB");
       return;
     }
     setUploading(true);
@@ -234,7 +234,7 @@ export function SettingsForm({
                 Profile picture
               </p>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
-                Drop an image here or click below. PNG, JPG up to 3MB.
+                Drop an image here or click below. PNG, JPG up to 2MB.
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <input
@@ -329,7 +329,7 @@ export function SettingsForm({
           {callsThisMonth > 0 && (
             <div className="border-t border-border pt-4">
               <p className="text-[12px] font-medium text-foreground">
-                This month's usage
+                This month&apos;s usage
               </p>
               <div className="mt-2 grid grid-cols-2 gap-3 text-[12px]">
                 <div>

@@ -49,6 +49,8 @@ export default async function DashboardPage() {
     boardStatsMap = new Map(
       boardIds.map((id) => [id, { total: 0, done: 0, overdue: 0 }])
     );
+    // Request-time clock in an async Server Component; not client render state.
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     (cards ?? []).forEach((card) => {
       const stats = boardStatsMap.get(card.board_id);

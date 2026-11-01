@@ -69,7 +69,7 @@ function compareCards(a: Card, b: Card, sorts: ViewSort[]): number {
       case "due_date": {
         const av = a.due_date ? new Date(a.due_date).getTime() : Infinity;
         const bv = b.due_date ? new Date(b.due_date).getTime() : Infinity;
-        cmp = av - bv;
+        cmp = av === bv ? 0 : av < bv ? -1 : 1;
         break;
       }
       case "created_at": {
@@ -83,12 +83,12 @@ function compareCards(a: Card, b: Card, sorts: ViewSort[]): number {
   return 0;
 }
 
-export function applyView(
-  cards: Card[],
+export function applyView<T extends Card>(
+  cards: T[],
   filters: ViewFilter[],
   sorts: ViewSort[],
   search: string
-): Card[] {
+): T[] {
   let result = cards.filter((c) => matchSearch(c, search));
   for (const f of filters) result = result.filter((c) => matchFilter(c, f));
   if (sorts.length) result = [...result].sort((a, b) => compareCards(a, b, sorts));
