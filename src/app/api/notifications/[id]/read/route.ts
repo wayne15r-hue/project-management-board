@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { uuid } from '@/lib/service-desk/validation';
 
 export async function POST(
   _request: Request,
@@ -12,6 +13,13 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if(id.startsWith('desk:')){
+    const ticketNotificationId=id.slice(5);
+    if(!uuid.safeParse(ticketNotificationId).success)return NextResponse.json({error:'Invalid notification'},{status:400});
+    const {error}=await supabase.from('desk_notifications').update({read_at:new Date().toISOString()}).eq('id',ticketNotificationId).eq('recipient_id',user.id).is('read_at',null);
+    return error?NextResponse.json({error:'Unable to mark notification read'},{status:500}):NextResponse.json({ok:true});
+  }
 
   const { error } = await supabase
     .from("notifications")

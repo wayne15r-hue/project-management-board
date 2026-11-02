@@ -24,6 +24,7 @@ import {
   MessageSquare,
   LayoutGrid,
   ClipboardList,
+  Ticket,
   Settings,
   MoreHorizontal,
   ChevronsUpDown,
@@ -187,6 +188,13 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarP
               active={pathname === "/dashboard"}
               icon={<LayoutGrid className="h-4 w-4" />}
               label="All Boards"
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/dashboard/service-desk"
+              active={pathname.startsWith("/dashboard/service-desk")}
+              icon={<Ticket className="h-4 w-4" />}
+              label="Service Desk"
               collapsed={collapsed}
             />
             <SidebarLink

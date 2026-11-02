@@ -24,7 +24,8 @@ interface Notification {
   id: string;
   recipient_id: string;
   actor_id: string | null;
-  type: "assignment" | "mention" | "comment" | "review_requested" | "review_approved" | "review_changes_requested" | "review_withdrawn" | "review_invalidated" | "due_today" | "overdue" | "escalation";
+  type: string;
+  ticket_id?: string;
   card_id: string | null;
   board_id: string | null;
   activity_log_id: string | null;
@@ -90,13 +91,14 @@ function NotificationBellContent({ userId }: { userId: string }) {
     const current={active:true,controller:new AbortController(),sequence:0};session.current=current;
     void load();
     const supabase=createClient();
-    const channel=supabase.channel(`notifications-${userId}`).on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`recipient_id=eq.${userId}`},()=>{if(current.active)void load();}).subscribe((status)=>{if(status==="SUBSCRIBED"&&current.active)void load();});
+    const channel=supabase.channel(`notifications-${userId}`).on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`recipient_id=eq.${userId}`},()=>{if(current.active)void load();}).on("postgres_changes",{event:"*",schema:"public",table:"desk_notifications",filter:`recipient_id=eq.${userId}`},()=>{if(current.active)void load();}).subscribe((status)=>{if(status==="SUBSCRIBED"&&current.active)void load();});
     const refresh=()=>{if(current.active)void load();};
-    window.addEventListener("focus",refresh);window.addEventListener("online",refresh);
+    window.addEventListener("focus",refresh);window.addEventListener("online",refresh);window.addEventListener('service-desk-updated',refresh);
+    const timer=window.setInterval(refresh,30000);
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
       if(next?.user.id===userId)return;current.active=false;current.controller.abort();setNotifications([]);setUnread(0);setOpen(false);setError("");
     });
-    return()=>{current.active=false;current.controller.abort();subscription.unsubscribe();void supabase.removeChannel(channel);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);};
+    return()=>{current.active=false;current.controller.abort();subscription.unsubscribe();void supabase.removeChannel(channel);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);window.removeEventListener('service-desk-updated',refresh);window.clearInterval(timer);};
   },[userId,load]);
   async function markRead(url:string){
     const current=session.current;if(!current?.active||writing)return false;
@@ -109,7 +111,8 @@ function NotificationBellContent({ userId }: { userId: string }) {
     const current=session.current;
     if(!n.read_at&&!await markRead(`/api/notifications/${n.id}/read`))return;
     if(!current?.active)return;setOpen(false);
-    if(n.board_id)router.push(`/dashboard/board/${n.board_id}${n.card_id?`?card=${n.card_id}`:""}`);
+    if(n.ticket_id)router.push(`/dashboard/service-desk/${n.ticket_id}`);
+    else if(n.board_id)router.push(`/dashboard/board/${n.board_id}${n.card_id?`?card=${n.card_id}`:""}`);
   }
   async function handleMarkAllRead(){await markRead("/api/notifications/read-all");}
   const badge = unread > 99 ? "99+" : String(unread);

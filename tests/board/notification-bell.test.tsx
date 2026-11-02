@@ -25,3 +25,9 @@ it("rejects an old account response and stale realtime callback after account re
  finish({ok:true,json:async()=>({notifications:[],unread_count:91})});previous();
  await waitFor(()=>expect(vi.mocked(fetch).mock.calls.length).toBe(2));expect(screen.queryByText("91")).toBeNull();
 });
+it('opens ticket notifications in Service Desk',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({notifications:[{id:'desk:ticket-alert',ticket_id:'ticket-123',title:'SD-000001 · VPN issue',type:'assign',read_at:'2026-11-02',created_at:new Date().toISOString(),actor:null}],unread_count:0})})));
+ render(<NotificationBell userId="u"/>);fireEvent.click(screen.getByRole('button',{name:'Notifications'}));
+ fireEvent.click(await screen.findByRole('button',{name:/SD-000001/}));
+ expect(mocks.push).toHaveBeenCalledWith('/dashboard/service-desk/ticket-123');
+});
