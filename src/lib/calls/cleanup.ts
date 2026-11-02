@@ -6,6 +6,13 @@ import {callConfiguration} from './config';
 export async function drainMediaCleanup(room?:string,deadline=Date.now()+20000):Promise<boolean> {
  const config=callConfiguration();if(!config)return false;
  const admin=createAdminClient();
+ // Empty rooms need no exclusive worker. In particular, a new call must not
+ // fail token issuance because a dashboard poll is draining a different room.
+ let probe=admin.from('audio_media_cleanup').select('id').limit(1);
+ if(room)probe=probe.eq('room_name',room);
+ const pending=await probe;
+ if(pending.error)return false;
+ if(!pending.data?.length)return true;
  const {data:lease,error:leaseError}=await admin.rpc('audio_cleanup_claim');
  if(leaseError||!lease)return false;
  try {
