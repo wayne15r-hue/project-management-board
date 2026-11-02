@@ -9,11 +9,7 @@ export async function POST() {
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("recipient_id", user.id)
-    .is("read_at", null);
+  const { error } = await supabase.rpc('desk_mark_all_notifications_read');
 
   if (error) {
     console.error("[notifications/read-all POST] update failed:", error);

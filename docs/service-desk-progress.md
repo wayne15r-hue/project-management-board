@@ -1,0 +1,10 @@
+# Service Desk execution ledger — plan: docs/superpowers/plans/2026-11-02-service-desk.md
+
+- Baseline: 323 tests across 53 files passed on deployed approvals code. origin/main refreshed to 62d0ce2; clean linked worktree switched to codex/service-desk.
+- Database tests RED: 11 tests failed because desk operations did not exist. Implemented additive migration; first GREEN attempt found PL/pgSQL local-variable qualification error, corrected with an explicit block label. One test fixture needed an assignee to isolate the approval gate from the separate assignee gate.
+- Preflight: ticket APIs consume locked SQL operations; UI consumes typed list/detail/context responses. Ticket notifications use a separate table merged at the existing bell boundary, preserving board delivery machinery.
+- Implemented database, APIs, responsive request/queue/detail/settings screens, My Work sections and shared bell integration.
+- Independent review identified signed-URL revocation bypass, malformed direct-RPC field values and attachment replay after fulfillment. Fixed all three, with regression tests. Storage SELECT is unavailable to authenticated clients; the server-only download reads bytes after an authenticated RLS lookup.
+- Real PostgreSQL independent connections: stale approval, conflicting decisions, duplicate submission and concurrent membership removal all passed; replay/injected rollback preserved original-card fingerprint.
+- Verification: full suite 351/351 passed across 59 files; two additional attachment/notification database scenarios passed afterward. Lint and typecheck passed. Production webpack build passed with the same public build-placeholder configuration used by CI. Local node_modules is a pre-existing junction outside the Turbopack root; webpack was used locally without modifying application build configuration.
+- Production baseline captured before schema changes: 50 cards, 19 boards, 2 teams, 3 approval requests, 0 card attachments; full-card fingerprint b4fde78db43c5fe0a078fb49808fa185.
