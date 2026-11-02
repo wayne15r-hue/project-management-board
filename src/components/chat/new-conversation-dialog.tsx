@@ -30,6 +30,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
   const [results, setResults] = useState<ChatProfile[]>([]);
   const [selected, setSelected] = useState<ChatProfile[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [explicitGroup, setExplicitGroup] = useState(false);
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,7 +55,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
     setSelected((prev) =>
       prev.some((p) => p.id === user.id)
         ? prev.filter((p) => p.id !== user.id)
-        : [...prev, user]
+        : prev.length < 49 ? [...prev, user] : prev
     );
   }
 
@@ -63,10 +64,10 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
       toast.error("Pick at least one person to start a conversation.");
       return;
     }
-    const isGroup = selected.length > 1;
+    const isGroup = explicitGroup || selected.length > 1;
     const trimmedGroupName = groupName.trim();
-    if (isGroup && !trimmedGroupName) {
-      setGroupNameError("Group name is required.");
+    if (isGroup && (!trimmedGroupName || trimmedGroupName.length > 100)) {
+      setGroupNameError("Group name must contain 1–100 characters.");
       return;
     }
     setGroupNameError(null);
@@ -107,7 +108,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
     }
   }
 
-  const isGroup = selected.length > 1;
+  const isGroup = explicitGroup || selected.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,6 +116,11 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>New conversation</DialogTitle>
         </DialogHeader>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={explicitGroup} onChange={e => setExplicitGroup(e.target.checked)} disabled={creating}/>
+          Create group
+        </label>
+        <p className="text-xs text-muted-foreground">Select 1–49 people. Groups can have up to 50 members including you.</p>
 
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -138,6 +144,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
         )}
 
         <Input
+          aria-label="Search by name or email"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or email"
@@ -190,7 +197,12 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
 
         {isGroup && (
           <div className="space-y-1">
+            <label htmlFor="new-group-name">Group name (required)</label>
             <Input
+              id="new-group-name"
+              maxLength={100}
+              required
+              aria-describedby="new-group-name-help"
               value={groupName}
               onChange={(e) => {
                 setGroupName(e.target.value);
@@ -200,6 +212,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
               aria-invalid={groupNameError ? true : undefined}
               className={cn(groupNameError && "border-destructive")}
             />
+            <p id="new-group-name-help" className="text-xs text-muted-foreground">1–100 characters.</p>
             {groupNameError && (
               <p className="text-[11px] text-destructive">{groupNameError}</p>
             )}
@@ -220,7 +233,7 @@ function ConversationDialogContent({ open, onOpenChange, onCreated }: Props) {
             disabled={
               selected.length === 0 ||
               creating ||
-              (isGroup && !groupName.trim())
+              (isGroup && (!groupName.trim() || groupName.trim().length > 100))
             }
           >
             {creating ? (

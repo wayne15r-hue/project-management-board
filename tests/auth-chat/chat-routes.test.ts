@@ -17,23 +17,50 @@ it('rejects ambiguous reconnect pagination before querying messages',async()=>{
   const response=await GET(new Request('https://app.test/api/messages?after=2026-11-01T00:00:00Z&before=2026-11-01T00:01:00Z'),context);
   expect(response.status).toBe(400);
 });
-function fixture(member = true) {
+function fixture(member = true, insertError: {code:string;message:string}|null = null, membershipError: {message:string}|null = null) {
   const operations: Array<[string, unknown[]]> = [];
   const writes: Array<Record<string, unknown>> = [];
   const old = { id: "00000000-0000-4000-8000-000000000002", conversation_id: "conv", created_at: "2026-11-01T00:00:00Z", file_url: "https://own.supabase.co/storage/v1/object/sign/chat-files/conv/old.pdf?token=expired" };
   const from = vi.fn((table: string) => {
     const query = new Proxy({}, { get: (_target, name) => {
       if (name === "then") return (resolve: (value: unknown) => void) => resolve({ data: table === "messages" ? [old] : [], error: null });
-      if (name === "single") return async () => ({ data: { ...old, ...writes.at(-1) }, error: null });
+      if (name === "single") return async () => ({ data: insertError ? null : { ...old, ...writes.at(-1) }, error: insertError });
       return (...args: unknown[]) => { operations.push([String(name), args]); if (name === "insert") writes.push(args[0] as Record<string, unknown>); return query; };
     } }); return query;
   });
   const sign = vi.fn(async (path: string) => ({ data: { signedUrl: `https://signed.test/${path}?fresh` }, error: null }));
-  const client = { auth: { getUser: async () => ({ data: { user: { id: "user" } } }) }, rpc: vi.fn(async () => ({ data: member, error: null })), from, storage: { from: () => ({ upload: async () => ({ error: null }), createSignedUrl: sign, remove: async () => ({ error: null }) }) } };
+  const client = { auth: { getUser: async () => ({ data: { user: { id: "user" } } }) }, rpc: vi.fn(async () => ({ data: member, error: membershipError })), from, storage: { from: () => ({ upload: async () => ({ error: null }), createSignedUrl: sign, remove: async () => ({ error: null }) }) } };
   state.client = client; return { operations, writes, sign, client };
 }
 beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://own.supabase.co"));
 describe("chat routes", () => {
+  it('returns 403 before inserting when a removed member sends a message',async()=>{
+    const f=fixture(false);
+    const response=await sendMessage(new Request('https://app.test/api/messages',{method:'POST',body:JSON.stringify({content:'After removal'})}),context);
+    expect(response.status).toBe(403);
+    expect(f.writes).toHaveLength(0);
+  });
+  it('returns 403 if membership is revoked between the check and message insert',async()=>{
+    const f=fixture(true,{code:'42501',message:'new row violates row-level security policy'});
+    const response=await sendMessage(new Request('https://app.test/api/messages',{method:'POST',body:JSON.stringify({content:'Racing removal'})}),context);
+    expect(response.status).toBe(403);
+    expect(f.writes).toHaveLength(1);
+  });
+  it('fails closed before inserting when the membership lookup errors',async()=>{
+    const f=fixture(true,null,{message:'Lookup failed'});
+    const response=await sendMessage(new Request('https://app.test/api/messages',{method:'POST',body:JSON.stringify({content:'Check failure'})}),context);
+    expect(response.status).toBe(500);
+    expect(f.writes).toHaveLength(0);
+  });
+  it('keeps unrelated insert failures as server errors and permits valid member sends',async()=>{
+    fixture(true,{code:'XX000',message:'Database failed'});
+    const request=()=>new Request('https://app.test/api/messages',{method:'POST',body:JSON.stringify({content:'Member message'})});
+    expect((await sendMessage(request(),context)).status).toBe(500);
+    fixture();
+    const response=await sendMessage(request(),context);
+    expect(response.status).toBe(200);
+    expect((await response.json()).content).toBe('Member message');
+  });
   it("refuses nonmember reads before signing any file", async () => {
     const f = fixture(false);
     const response = await GET(new Request("https://app.test/api/messages"), context);

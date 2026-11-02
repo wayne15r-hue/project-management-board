@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { conversationCreation, groupErrorStatus, groupName } from './group-validation';
 
 // GET /api/conversations — list conversations the caller belongs to
 export async function GET() {
@@ -60,25 +61,21 @@ export async function POST(request: Request) {
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-  const type = body?.type;
-  const userIds: string[] = Array.isArray(body?.userIds) ? body.userIds : [];
-  const name: string | null =
-    typeof body?.name === "string" && body.name.trim() ? body.name.trim() : null;
-
-  if (type !== "direct" && type !== "group") {
-    return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-  }
-  const otherIds = userIds.filter((id) => id && id !== user.id);
+  const parsed = conversationCreation.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Select 1–49 members with valid user IDs and a valid conversation type.' }, { status: 400 });
+  const { type, userIds, name } = parsed.data;
+  const otherIds = [...new Set(userIds.filter((id) => id !== user.id))];
   if (otherIds.length === 0) {
     return NextResponse.json({ error: "Pick at least one member" }, { status: 400 });
   }
 
   const convType = type === "group" || otherIds.length > 1 ? "group" : "direct";
+  const parsedName = groupName.safeParse(name);
+  if (convType === 'group' && !parsedName.success) return NextResponse.json({ error: 'Group name must contain 1–100 characters.' }, { status: 400 });
 
   const { data: conversationId, error } = await supabase.rpc("create_conversation", {
     p_type: convType,
-    p_name: convType === "group" ? name : null,
+    p_name: convType === "group" && parsedName.success ? parsedName.data : null,
     p_member_ids: otherIds,
   });
 
@@ -87,7 +84,7 @@ export async function POST(request: Request) {
     const friendly = /row-level security/i.test(raw)
       ? "You don't have permission to create conversations. Please sign out and back in."
       : raw;
-    return NextResponse.json({ error: friendly }, { status: 500 });
+    return NextResponse.json({ error: friendly }, { status: groupErrorStatus(error?.code) });
   }
 
   return NextResponse.json({ id: conversationId });

@@ -14,6 +14,12 @@ export interface ChatProfile {
   avatar_url: string | null;
 }
 
+export interface GroupDetails {
+  id: string;
+  name: string | null;
+  members: (ChatProfile & { is_admin: boolean })[];
+}
+
 export interface Conversation {
   id: string;
   type: ConversationType;

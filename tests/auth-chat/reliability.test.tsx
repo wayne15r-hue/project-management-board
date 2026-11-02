@@ -17,6 +17,35 @@ const conversation:Conversation = { id:'a', name:'QA isolated', type:'direct', b
 const message:Message = { id:'m', conversation_id:'a', sender_id:'u', content:'Reaction fixture', message_type:'text', file_url:null, file_name:null, file_size:null, file_type:null, reply_to_id:null, edited_at:null, created_at:'2026-11-01T00:00:00Z', sender:user, reactions:[{emoji:'👍',count:1,user_ids:['other']}] };
 const props = { conversation, currentUser:user, onBack:vi.fn(), onMessageSent:vi.fn(), onDelete:vi.fn() };
 const json = (value:unknown, status=200) => new Response(JSON.stringify(value),{status});
+it('opens group details from the group header while retaining the thread',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async(url:string)=>json(url.endsWith('/group')?{name:'QA group',members:[{...user,is_admin:true}]}:url.endsWith('/read')?{}:[message])));
+  render(<MessageThread {...props} conversation={{...conversation,type:'group',name:'QA group'}}/>);
+  await screen.findByText('Reaction fixture');
+  fireEvent.click(screen.getByRole('button',{name:'Group details'}));
+  await screen.findByRole('dialog',{name:'Group details'});
+  expect(screen.getByText('Admin')).toBeTruthy();
+});
+it('clears stale thread content when recovery reports revoked membership',async()=>{
+  let revoked=false;
+  vi.stubGlobal('fetch',vi.fn(async(url:string)=>json(url.endsWith('/read')?{}:revoked?{error:'Forbidden'}:[message],revoked&&!url.endsWith('/read')?403:200)));
+  const accessRevoked=vi.fn();
+  render(<MessageThread {...props} onAccessRevoked={accessRevoked}/>);
+  await screen.findByText('Reaction fixture');
+  revoked=true;
+  await act(async()=>subscriptions.forEach(cb=>cb('SUBSCRIBED')));
+  await waitFor(()=>expect(accessRevoked).toHaveBeenCalledWith('a'));
+  expect(screen.queryByText('Reaction fixture')).toBeNull();
+});
+it('clears stale thread content when a send is rejected after removal',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async(url:string,init?:RequestInit)=>json(url.endsWith('/read')?{}:init?.method==='POST'?{error:'Forbidden'}:[message],init?.method==='POST'&&!url.endsWith('/read')?403:200)));
+  const revoked=vi.fn();
+  render(<MessageThread {...props} onAccessRevoked={revoked}/>);
+  await screen.findByText('Reaction fixture');
+  fireEvent.change(screen.getByPlaceholderText('Write a message…'),{target:{value:'After removal'}});
+  fireEvent.click(screen.getByRole('button',{name:'Send message'}));
+  await waitFor(()=>expect(revoked).toHaveBeenCalledWith('a'));
+  expect(screen.queryByText('Reaction fixture')).toBeNull();
+});
 beforeEach(() => { events.length=0; subscriptions.length=0; vi.clearAllMocks(); vi.spyOn(document,'visibilityState','get').mockReturnValue('visible'); vi.stubGlobal('requestAnimationFrame',(cb:()=>void)=>{cb();return 1;}); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
