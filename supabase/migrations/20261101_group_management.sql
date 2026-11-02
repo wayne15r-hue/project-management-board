@@ -48,6 +48,25 @@ $$;
 revoke all on function public.create_conversation(text,text,uuid[]) from public,anon;
 grant execute on function public.create_conversation(text,text,uuid[]) to authenticated;
 
+-- Serialize deletion with role changes before deciding whether the caller
+-- is still an admin. Checking first would authorize against stale membership.
+create or replace function public.delete_conversation(p_conversation_id uuid)
+returns boolean language plpgsql security definer set search_path=public as $$
+declare caller_admin boolean;
+begin
+  perform 1 from public.conversations where id=p_conversation_id for update;
+  select is_admin into caller_admin from public.conversation_members
+    where conversation_id=p_conversation_id and user_id=auth.uid();
+  if not coalesce(caller_admin,false) then
+    raise exception 'Only admins can delete conversations' using errcode='42501';
+  end if;
+  delete from public.conversations where id=p_conversation_id;
+  return true;
+end;
+$$;
+revoke all on function public.delete_conversation(uuid) from public,anon;
+grant execute on function public.delete_conversation(uuid) to authenticated;
+
 create or replace function public.manage_group(p_conversation_id uuid,p_action text,p_user_id uuid default null,p_name text default null)
 returns void language plpgsql security definer set search_path=public as $$
 declare

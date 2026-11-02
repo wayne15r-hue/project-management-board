@@ -8,6 +8,24 @@ afterAll(async()=>{await db?.close();});
 async function createGroup(type='group',name:string|null='QA group',members=[uid(2)],actor=1) { return (await asUser(db,actor,'select create_conversation($1,$2,$3) id',[type,name,members])).rows[0] as {id:string}; }
 async function group() { return (await createGroup()).id; }
 const manage=(id:string, action:string, target:string|null=null, name:string|null=null, actor=1)=>asUser(db,actor,'select manage_group($1,$2,$3,$4)',[id,action,target,name]);
+it('locks the conversation before delete authorization reads the caller membership',async()=>{
+  const id=await group();
+  // Observe the tuple lock at the auth boundary, without pretending this
+  // single-session fixture can reproduce independent-session lock waiting.
+  await db.exec(`create or replace function auth.uid() returns uuid language plpgsql as $$
+  begin
+    if not exists(select 1 from public.conversations where id='${id}' and xmax::text::bigint=mod(txid_current(),4294967296)) then
+      raise exception 'Authorization ran before conversation lock';
+    end if;
+    return nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
+  end; $$;`);
+  try {
+    await expect(asUser(db,1,'select delete_conversation($1)',[id])).resolves.toMatchObject({rows:[{delete_conversation:true}]});
+  } finally {
+    await db.exec("create or replace function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$");
+  }
+  expect((await db.query('select id from conversations where id=$1',[id])).rows).toEqual([]);
+});
 it('denies outsiders and ordinary members admin actions',async()=>{
   const id=await group();
   for(const actor of [2,3]) for(const action of ['rename','add','remove','promote','demote']) await expect(manage(id,action,uid(3),'Changed',actor)).rejects.toThrow(/Forbidden|admin/i);

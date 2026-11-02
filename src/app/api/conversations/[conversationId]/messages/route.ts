@@ -125,6 +125,10 @@ export async function POST(
     return NextResponse.json({ error: "Empty message" }, { status: 400 });
   }
 
+  const { data: member, error: membershipError } = await supabase.rpc("is_conversation_member", { conv_id: conversationId });
+  if (membershipError) return NextResponse.json({ error: "Membership check failed" }, { status: membershipError.code === "42501" ? 403 : 500 });
+  if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -144,7 +148,7 @@ export async function POST(
     .single();
 
   if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: error.code === "42501" ? 403 : 500 });
 
   await supabase
     .from("conversation_members")
