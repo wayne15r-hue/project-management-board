@@ -5,6 +5,7 @@ import { MobileSidebarToggle } from "@/components/shared/mobile-sidebar-toggle";
 import { AICommandBar } from "@/components/ai/ai-command-bar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AuthSessionBoundary } from "@/components/shared/auth-session-boundary";
+import { CallProvider } from '@/components/calls/call-provider';
 
 export default async function DashboardLayout({
   children,
@@ -34,6 +35,7 @@ export default async function DashboardLayout({
 
   return (
     <AuthSessionBoundary key={user.id} userId={user.id}>
+    <CallProvider currentUserId={user.id}>
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         boards={boards || []}
@@ -50,6 +52,7 @@ export default async function DashboardLayout({
       </main>
       <AICommandBar />
     </div>
+    </CallProvider>
     </AuthSessionBoundary>
   );
 }

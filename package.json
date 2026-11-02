@@ -25,6 +25,8 @@
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.18.0",
     "groq-sdk": "^1.1.2",
+    "livekit-client": "^2.23.0",
+    "livekit-server-sdk": "^2.19.2",
     "lucide-react": "^1.8.0",
     "next": "16.4.3",
     "next-themes": "^0.4.6",
@@ -39,18 +41,20 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
-    "vitest": "^5.0.5",
-    "@electric-sql/pglite": "^0.3.14",
-    "@testing-library/react": "^16",
     "jsdom": "^27",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   },
-  "engines": { "node": ">=24.0.0" }
+  "engines": {
+    "node": ">=24.0.0"
+  }
 }
