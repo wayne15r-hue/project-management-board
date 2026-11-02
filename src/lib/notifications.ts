@@ -1,11 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  sendAssignmentNotificationEmail,
-  sendMentionNotificationEmail,
-  sendCommentNotificationEmail,
-} from "@/lib/email";
-
-type NotificationType = "assignment" | "mention" | "comment";
+import { createAdminClient } from '@/lib/supabase/admin';type NotificationType = "assignment" | "mention" | "comment";
 
 export interface NotificationInput {
   recipientId: string;
@@ -23,110 +16,13 @@ export interface NotificationInput {
   };
 }
 
-/**
- * Creates an in-app notification row, and optionally sends an email
- * if the recipient has email_notifications enabled AND email payload is provided.
- *
- * Safe to call fire-and-forget. Errors are logged, never thrown to caller.
- * Never notify the actor themselves (recipientId === actorId → no-op).
- */
-export async function createNotification(
-  input: NotificationInput
-): Promise<void> {
+/** Compatibility adapter. Source-write triggers own transactional generation. */
+export async function createNotification(input: NotificationInput): Promise<void> {
   if (input.recipientId === input.actorId) return;
-
-  try {
-    const supabase = createAdminClient();
-
-    // Service-role writes bypass RLS: check both identities and the card/board
-    // relationship before emitting any private content, including email.
-    const { data: allowed, error: accessError } = await supabase.rpc(
-      "notification_recipient_allowed",
-      {
-        p_card_id: input.cardId,
-        p_board_id: input.boardId,
-        p_actor_id: input.actorId,
-        p_recipient_id: input.recipientId,
-      }
-    );
-    if (accessError || allowed !== true) return;
-
-    const { error: insertError } = await supabase.from("notifications").insert({
-      recipient_id: input.recipientId,
-      actor_id: input.actorId,
-      type: input.type,
-      card_id: input.cardId,
-      board_id: input.boardId,
-      activity_log_id: input.activityLogId ?? null,
-      title: input.title,
-      body: input.body ?? null,
-    });
-
-    if (insertError) {
-      console.error("[notifications] insert failed:", insertError);
-      return;
-    }
-
-    if (!input.email) return;
-
-    const { data: recipient, error: recipientError } = await supabase
-      .from("profiles")
-      .select("email, full_name, email_notifications")
-      .eq("id", input.recipientId)
-      .single();
-
-    if (recipientError || !recipient || !recipient.email) {
-      console.error(
-        "[notifications] recipient lookup failed:",
-        recipientError
-      );
-      return;
-    }
-
-    if (!recipient.email_notifications) return;
-
-    const { data: actor } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", input.actorId)
-      .single();
-
-    const actorName = actor?.full_name || actor?.email || "Someone";
-
-    try {
-      if (input.email.kind === "assignment") {
-        await sendAssignmentNotificationEmail({
-          to: recipient.email,
-          recipientName: recipient.full_name || "",
-          actorName,
-          cardTitle: input.email.cardTitle,
-          boardId: input.boardId,
-          cardId: input.cardId,
-        });
-      } else if (input.email.kind === "mention") {
-        await sendMentionNotificationEmail({
-          to: recipient.email,
-          recipientName: recipient.full_name || "",
-          actorName,
-          cardTitle: input.email.cardTitle,
-          commentText: input.email.commentText || "",
-          boardId: input.boardId,
-          cardId: input.cardId,
-        });
-      } else if (input.email.kind === "comment") {
-        await sendCommentNotificationEmail({
-          to: recipient.email,
-          recipientName: recipient.full_name || "",
-          commenterName: actorName,
-          commentText: input.email.commentText || "",
-          cardTitle: input.email.cardTitle,
-          boardId: input.boardId,
-        });
-      }
-    } catch (emailErr) {
-      console.error("[notifications] email send failed:", emailErr);
-    }
-  } catch (err) {
-    console.error("[notifications] unexpected error:", err);
-  }
+  const {error}=await createAdminClient().rpc('workflow_notify_legacy',{
+    p_card_id:input.cardId,p_board_id:input.boardId,p_actor_id:input.actorId,
+    p_recipient_id:input.recipientId,p_type:input.type,p_activity_log_id:input.activityLogId??null,
+    p_title:input.title,p_body:input.body??null,
+  });
+  if(error) console.error('[notifications] durable adapter failed');
 }

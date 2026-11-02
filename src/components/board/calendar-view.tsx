@@ -1,4 +1,6 @@
 "use client";
+import { responseError } from "@/lib/response-error";
+
 
 import { useMemo, useState } from "react";
 import {
@@ -85,10 +87,10 @@ export function CalendarView({ board, members, onRefresh }: CalendarViewProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw await responseError(res,"Failed to update card");
       onRefresh();
     } catch (error) {
-      toast.error("Failed to update card");
+      toast.error(error instanceof Error ? error.message : "Failed to update card");
       throw error;
     }
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 import { updateCardSchema } from "@/lib/validators/card";
 import { logActivity } from "@/lib/activity";
 import { createNotification } from "@/lib/notifications";
@@ -78,9 +79,7 @@ export async function PATCH(
       p_position: parsed.data.position ?? (parsed.data.column_id !== existing.column_id ? 2147483647 : existing.position),
       p_updates: metadata,
     });
-    if (moveError) return NextResponse.json({ error: moveError.message }, {
-      status: moveError.code === "42501" ? 403 : moveError.code?.startsWith("22") ? 400 : 500,
-    });
+    if (moveError) return workflowErrorResponse(moveError);
   }
 
   // Move RPC already writes updated_at. Avoid a separate write for move-only requests.
@@ -94,7 +93,7 @@ export async function PATCH(
     .eq("id", cardId)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: error.code === "42501" ? 403 : error.code?.startsWith("22") ? 400 : 500 });
+  if (error) return workflowErrorResponse(error);
 
   // Log activity
   const {
@@ -264,6 +263,6 @@ export async function DELETE(
   const supabase = await createClient();
 
   const { error } = await supabase.from("cards").delete().eq("id", cardId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json({ success: true });
 }

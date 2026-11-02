@@ -4,9 +4,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { CardDetailDialog } from "../../src/components/board/card-detail-dialog";
 import type { Card } from "../../src/types";
 
+vi.mock("@tanstack/react-query",()=>({useQueryClient:()=>({invalidateQueries:vi.fn()})}));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogContent: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogHeader: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogTitle: ({children}: {children: React.ReactNode}) => <div>{children}</div> }));
 vi.mock("@/components/ui/popover", () => ({Popover: ({children}: {children: React.ReactNode}) => <div>{children}</div>, PopoverContent: () => null, PopoverTrigger: ({children}: {children: React.ReactNode}) => <div>{children}</div>}));
 vi.mock("@/components/board/subtasks", () => ({Subtasks: () => null}));
+vi.mock("@/components/board/approval-panel", () => ({ApprovalPanel: () => <div>Approval panel<select aria-label="Approval reviewer"><option>A</option><option>B</option></select></div>}));
 vi.mock("@/components/board/attachments", () => ({Attachments: () => null}));
 vi.mock("@/components/board/label-picker", () => ({LabelPicker: () => null}));
 vi.mock("@/components/activity/activity-feed", () => ({ActivityFeed: () => null}));
@@ -15,6 +17,28 @@ vi.mock("@/components/ai/ai-writing-assistant", () => ({AIWritingAssistant: () =
 const card = {id:"one",title:"Original",description:null,priority:"medium",column_id:"a",created_at:"2026-01-01"} as Card;
 afterEach(cleanup);
 describe("card editor write failure", () => {
+  it("explains approval conflicts while retaining the edited draft",async()=>{
+    const update=vi.fn().mockRejectedValue(new Error("Approval required before completion. Request review first."));
+    render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()}/>);
+    const title=screen.getByPlaceholderText("Untitled");fireEvent.change(title,{target:{value:"Keep approval draft"}});fireEvent.blur(title);
+    await screen.findByText("Approval required before completion. Request review first.");
+    expect((title as HTMLInputElement).value).toBe("Keep approval draft");
+  });
+  it("leaves native reviewer select arrow keys to the select without navigating cards", () => {
+    const navigate=vi.fn();render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onNavigate={navigate}/>);
+    fireEvent.change(screen.getByPlaceholderText("Untitled"),{target:{value:"Unsaved title"}});
+    fireEvent.keyDown(screen.getByLabelText("Approval reviewer"),{key:"ArrowDown"});fireEvent.keyDown(screen.getByLabelText("Approval reviewer"),{key:"ArrowUp"});
+    expect(navigate).not.toHaveBeenCalled();expect((screen.getByPlaceholderText("Untitled") as HTMLInputElement).value).toBe("Unsaved title");
+  });
+  it("retains unsaved title and description when a successful approval refresh supplies the same card", () => {
+    const props={columns:[],members:[],open:true,onOpenChange:vi.fn(),onUpdate:vi.fn(),onDelete:vi.fn()};
+    const view=render(<CardDetailDialog {...props} card={card}/>);
+    fireEvent.change(screen.getByPlaceholderText("Untitled"),{target:{value:"Unsaved title"}});
+    fireEvent.change(screen.getByPlaceholderText("Add a description..."),{target:{value:"Unsaved description"}});
+    view.rerender(<CardDetailDialog {...props} card={{...card,title:"Server title"}}/>);
+    expect((screen.getByPlaceholderText("Untitled") as HTMLInputElement).value).toBe("Unsaved title");
+    expect((screen.getByPlaceholderText("Add a description...") as HTMLTextAreaElement).value).toBe("Unsaved description");
+  });
   it("never dispatches queued saves after the editor unmounts on account switch", async () => {
     let finish!:()=>void;
     const update=vi.fn().mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;})).mockResolvedValue(undefined);

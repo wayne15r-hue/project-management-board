@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 import { z } from "zod/v4";
 
 const createFieldSchema = z.object({
@@ -28,7 +29,7 @@ export async function GET(
     .eq("board_id", boardId)
     .order("position");
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }
 
@@ -72,7 +73,7 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -102,7 +103,7 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }
 
@@ -121,6 +122,6 @@ export async function DELETE(
     .eq("id", fieldId)
     .eq("board_id", boardId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json({ success: true });
 }

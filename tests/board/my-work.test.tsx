@@ -13,6 +13,10 @@ function mount(){client=new QueryClient({defaultOptions:{queries:{retry:false}}}
 beforeEach(()=>vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,json:async()=>result})));
 afterEach(()=>{cleanup();client?.clear();vi.unstubAllGlobals();});
 describe("My Work",()=>{
+  it("shows the full pending-review count and review-only attention badges",async()=>{
+    vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>({...result,items:[{...item,pending_my_review:true,approval_status:"pending"}],counts:{...result.counts,pendingMyReview:17}})} as Response);
+    mount();await screen.findByText("17");expect(screen.getByText("Pending My Review")).toBeTruthy();expect(screen.getByText("Your review")).toBeTruthy();expect(screen.getByText("pending")).toBeTruthy();
+  });
   it("shows task context, groups and full counts and requests the next page",async()=>{
     mount();await screen.findByRole("button",{name:"Call supplier"});
     expect(screen.getAllByText("Operations").length).toBeGreaterThan(0);

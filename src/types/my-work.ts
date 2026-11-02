@@ -7,10 +7,12 @@ export interface MyWorkItem extends Card {
   group: "overdue" | "today" | "upcoming" | "undated";
   is_overdue: boolean;
   is_due_today: boolean;
+  approval_status?: import("./approvals").ApprovalStatus;
+  pending_my_review?: boolean;
 }
 export interface MyWorkResponse {
   items: MyWorkItem[];
-  counts: { overdue: number; dueToday: number; blocked: number; totalOpen: number };
+  counts: { overdue: number; dueToday: number; blocked: number; totalOpen: number; pendingMyReview?: number };
   total: number;
   page: number;
   pageSize: number;

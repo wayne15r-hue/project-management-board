@@ -1,4 +1,6 @@
 "use client";
+import { responseError } from "@/lib/response-error";
+
 
 import { useEffect, useMemo, useRef } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -132,7 +134,7 @@ export default function BoardPage() {
         }}
         onUpdate={async (id, data) => {
           const response = await fetch(`/api/cards/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-          if (!response.ok) throw new Error("Failed to save card");
+          if (!response.ok) throw await responseError(response,"Failed to save card");
           await refetch();
         }}
         onDelete={async (id) => {

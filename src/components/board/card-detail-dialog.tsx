@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -34,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CardCustomFields } from "@/components/custom-fields/card-custom-fields";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { ApprovalPanel } from "./approval-panel";
 import { Subtasks } from "./subtasks";
 import { Attachments } from "./attachments";
 import { LabelPicker } from "./label-picker";
@@ -102,6 +104,7 @@ export function CardDetailDialog({
   onDelete,
   onNavigate,
 }: CardDetailDialogProps) {
+  const queryClient=useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
@@ -116,6 +119,7 @@ export function CardDetailDialog({
   const [blockedReason, setBlockedReason] = useState("");
   const [editingBlock, setEditingBlock] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -159,6 +163,7 @@ export function CardDetailDialog({
       setConfirmDelete(false);
       setDeleteError(false);
       setSaveStatus("idle");
+      setSaveError("");
       lastCardId.current = card.id;
     }
     if (!card) lastCardId.current = null;
@@ -175,22 +180,27 @@ export function CardDetailDialog({
       const lifetime = saveLifetime.current;
       const payload = { ...failedUpdates.current };
       setSaveStatus("saving");
+      setSaveError("");
       const request = saveQueue.current.then(async () => {
         if (!lifetime.active || lastCardId.current !== cardId) return;
         try {
           await onUpdate(cardId, payload);
-          if (lastCardId.current !== cardId || sequence !== saveSequence.current) return;
+          if(lifetime.active)void queryClient.invalidateQueries({queryKey:["approval",cardId]});
+          if (!lifetime.active || lastCardId.current !== cardId || sequence !== saveSequence.current) return;
           failedUpdates.current = {};
           setSaveStatus("saved");
           savedTimer.current = setTimeout(() => setSaveStatus("idle"), 1500);
-        } catch {
-          if (lastCardId.current === cardId && sequence === saveSequence.current) setSaveStatus("error");
+        } catch (error) {
+          if (lifetime.active && lastCardId.current === cardId && sequence === saveSequence.current) {
+            setSaveStatus("error");
+            setSaveError(error instanceof Error ? error.message : "Unable to save this task. Please retry.");
+          }
         }
       });
       saveQueue.current = request;
       await request;
     },
-    [card, onUpdate]
+    [card, onUpdate, queryClient]
   );
 
   const debouncedSave = useCallback(
@@ -221,6 +231,7 @@ export function CardDetailDialog({
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
           target.isContentEditable)
       )
         return;
@@ -313,6 +324,7 @@ export function CardDetailDialog({
               {saveStatus === "error" && <button type="button" className="text-[11px] underline" onClick={() => performSave(failedUpdates.current)}>Retry</button>}
             </div>
           </div>
+          {saveStatus === "error" && saveError && <p role="alert" className="mb-2 text-sm text-destructive">{saveError}</p>}
           <input
             value={title}
             onChange={(e) => {
@@ -629,6 +641,8 @@ export function CardDetailDialog({
 
           <Separator className="my-7" />
 
+          {open && <ApprovalPanel key={card.id} cardId={card.id} boardId={card.board_id} />}
+          <Separator className="my-7" />
           {/* Description */}
           <div>
             <div className="mb-2 flex items-center justify-between">

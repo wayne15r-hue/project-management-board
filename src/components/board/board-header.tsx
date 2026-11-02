@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ import {
   Sparkles,
   FileText,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { WorkflowSettingsDialog } from "./workflow-settings-dialog";
 import { ImportCardsDialog } from "./import-cards-dialog";
 import { BoardSummaryDialog } from "@/components/ai/board-summary-dialog";
 import { ImportNotesDialog } from "@/components/ai/import-notes-dialog";
@@ -66,6 +68,20 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
+  const [workflowOpen,setWorkflowOpen]=useState(false);
+  const [owner,setOwner]=useState(false);
+  useEffect(()=>{
+    let active=true;let sessionChanged=false;let currentUserId:string|null=null;
+    const supabase=createClient();
+    void supabase.auth.getUser().then(({data})=>{if(active&&!sessionChanged){currentUserId=data.user?.id??null;setOwner(currentUserId===board.owner_id);if(currentUserId!==board.owner_id)setWorkflowOpen(false);}});
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      if(!active)return;
+      sessionChanged=true;const nextId=session?.user.id??null;const isOwner=nextId===board.owner_id;
+      if(nextId!==currentUserId||!isOwner)setWorkflowOpen(false);
+      currentUserId=nextId;setOwner(isOwner);
+    });
+    return()=>{active=false;subscription.unsubscribe();};
+  },[board.owner_id]);
   function handleExport(kind: "csv" | "json") {
     const url = `/api/boards/${board.id}/export?format=${kind}`;
     const a = document.createElement("a");
@@ -200,6 +216,7 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
               )}
             </div>
           )}
+          {owner&&<button type="button" onClick={()=>setWorkflowOpen(true)} className="rounded-md px-2 py-1 text-[13px] text-muted-foreground hover:bg-accent">Workflow</button>}
           <Popover>
             <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground">
               <Palette className="h-3.5 w-3.5" />
@@ -309,6 +326,7 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
         <ViewControls board={board} members={members} />
       </div>
 
+      {owner&&workflowOpen&&<WorkflowSettingsDialog boardId={board.id} open={workflowOpen} onOpenChange={setWorkflowOpen}/>}
       <ImportCardsDialog
         boardId={board.id}
         firstColumnId={board.columns[0]?.id ?? null}

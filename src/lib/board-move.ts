@@ -1,3 +1,4 @@
+import { responseError } from "@/lib/response-error";
 import type { BoardWithDetails } from "@/types";
 type Columns = BoardWithDetails["columns"];
 
@@ -25,5 +26,5 @@ export async function persistBoardMove(columns: Columns, cardId: string, request
   // The PATCH route invokes the transactional move RPC, including full source
   // and destination reindexing, then applies activity and recurrence behavior.
   const response = await request(`/api/cards/${cardId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ column_id: card.column_id, position: card.position }) });
-  if (!response.ok) throw new Error("Failed to save card position");
+  if (!response.ok) throw await responseError(response, "Failed to save card position");
 }

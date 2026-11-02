@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 import { ensureBucket } from "@/lib/supabase/storage-setup";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -18,7 +19,7 @@ export async function GET(
     .eq("card_id", cardId)
     .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
 
   // Add signed URLs for viewing/downloading. If the storage bucket isn't
   // configured yet, fall back to null URLs rather than throwing.
@@ -108,7 +109,7 @@ export async function POST(
     } catch {
       // ignore cleanup errors
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return workflowErrorResponse(error);
   }
 
   let signedUrl: string | null = null;
@@ -159,6 +160,6 @@ export async function DELETE(
   }
 
   const { error } = await supabase.from("attachments").delete().eq("id", id).eq("card_id", cardId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json({ success: true });
 }
