@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {drainMediaCleanup} from '@/lib/calls/cleanup';
 
 // DELETE /api/conversations/[conversationId] — admin only, via RPC
 export async function DELETE(
@@ -22,5 +23,5 @@ export async function DELETE(
     const status = /only admins/i.test(msg) ? 403 : 500;
     return NextResponse.json({ error: msg }, { status });
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, mediaCleanupPending:!await drainMediaCleanup() });
 }

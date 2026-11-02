@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "./avatar";
 import { MessageInput } from "./message-input";
 import { GroupDetailsDialog } from './group-details-dialog';
+import { CallControls } from '@/components/calls/call-provider';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Tooltip,
@@ -688,6 +689,7 @@ function MessageThreadContent({
             {conversation.members.length === 1 ? "member" : "members"}
           </p>}
         </div>
+        <CallControls key={conversation.id} conversation={conversation}/>
         {conversation.current_user_is_admin && (
           <button
             type="button"

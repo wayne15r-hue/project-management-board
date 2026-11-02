@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { groupErrorStatus, groupMutation } from '../../group-validation';
+import {drainMediaCleanup} from '@/lib/calls/cleanup';
 
 type Context = { params: Promise<{ conversationId: string }> };
 export async function GET(_request: Request, { params }: Context) {
@@ -30,5 +31,5 @@ export async function PATCH(request: Request, { params }: Context) {
     p_name: 'name' in mutation ? mutation.name : null,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: groupErrorStatus(error.code) });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, mediaCleanupPending:!await drainMediaCleanup() });
 }
