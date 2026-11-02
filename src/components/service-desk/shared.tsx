@@ -1,11 +1,14 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { cloneElement, useEffect, useId, useRef, useState, type ReactElement } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { TicketType } from '@/types/service-desk';
 export const control='w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50';
 export const actionClass='rounded-md border border-border px-3 py-2 text-sm hover:bg-accent disabled:opacity-50';
-export function Field({label,children}:{label:string;children:ReactNode}) { return <label className="flex min-w-0 flex-col gap-1.5 text-sm font-medium"><span>{label}</span>{children}</label>; }
+export function Field({label,children}:{label:string;children:ReactElement<{id?:string}>}) {
+ const id=useId();
+ return <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium"><label htmlFor={id}>{label}</label>{cloneElement(children,{id})}</div>;
+}
 export function ErrorNotice({message,retry}:{message:string;retry?:()=>void}) {return <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"><p>{message}</p>{retry&&<button type="button" className="mt-2 underline" onClick={retry}>Retry</button>}</div>;}
 export async function deskRead<T>(url:string,signal?:AbortSignal):Promise<T>{
  const res=await fetch(url,{signal,cache:'no-store'});const body=await res.json();
