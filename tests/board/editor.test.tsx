@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CardDetailDialog } from "../../src/components/board/card-detail-dialog";
 import type { Card } from "../../src/types";
 
@@ -15,6 +15,17 @@ vi.mock("@/components/ai/ai-writing-assistant", () => ({AIWritingAssistant: () =
 const card = {id:"one",title:"Original",description:null,priority:"medium",column_id:"a",created_at:"2026-01-01"} as Card;
 afterEach(cleanup);
 describe("card editor write failure", () => {
+  it("never dispatches queued saves after the editor unmounts on account switch", async () => {
+    let finish!:()=>void;
+    const update=vi.fn().mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;})).mockResolvedValue(undefined);
+    const view=render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);
+    const title=screen.getByPlaceholderText("Untitled");
+    fireEvent.change(title,{target:{value:"First update"}});fireEvent.blur(title);
+    await waitFor(()=>expect(update).toHaveBeenCalledTimes(1));
+    fireEvent.change(title,{target:{value:"Queued update"}});fireEvent.blur(title);
+    view.unmount();await act(async()=>finish());
+    expect(update).toHaveBeenCalledTimes(1);
+  });
   it("requires a reason to block, retains it after failure and retries the same update", async () => {
     const update=vi.fn().mockRejectedValueOnce(new Error("500")).mockResolvedValue(undefined);
     render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);

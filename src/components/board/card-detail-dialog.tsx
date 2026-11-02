@@ -126,6 +126,12 @@ export function CardDetailDialog({
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveLifetime = useRef({ active: true });
+  useEffect(() => {
+    const lifetime = { active: true };
+    saveLifetime.current = lifetime;
+    return () => { lifetime.active = false; };
+  }, []);
 
   useEffect(() => {
     if (card && card.id !== lastCardId.current) {
@@ -166,9 +172,11 @@ export function CardDetailDialog({
       failedUpdates.current = { ...failedUpdates.current, ...updates };
       const sequence = ++saveSequence.current;
       const cardId = card.id;
+      const lifetime = saveLifetime.current;
       const payload = { ...failedUpdates.current };
       setSaveStatus("saving");
       const request = saveQueue.current.then(async () => {
+        if (!lifetime.active || lastCardId.current !== cardId) return;
         try {
           await onUpdate(cardId, payload);
           if (lastCardId.current !== cardId || sequence !== saveSequence.current) return;

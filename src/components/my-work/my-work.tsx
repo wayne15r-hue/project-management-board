@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CalendarDays, CheckSquare, RefreshCw } from "lucide-react";
@@ -121,6 +121,11 @@ function WorkRow({item,timezone,onOpen}:{item:MyWorkItem;timezone:string;onOpen:
 
 function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:string;onClose:()=>void;onRefresh:()=>Promise<unknown>}){
   const client=useQueryClient();
+  const requests=useRef<AbortController|null>(null);
+  useEffect(()=>{
+    const controller=new AbortController();requests.current=controller;
+    return ()=>controller.abort();
+  },[]);
   const details=useQuery({
     queryKey:["my-work",userId,"editor",item.id],gcTime:0,staleTime:0,refetchOnWindowFocus:false,
     queryFn:async({signal})=>{
@@ -131,14 +136,20 @@ function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:stri
     },
   });
   async function update(cardId:string,data:Partial<Card>){
-    const res=await fetch(`/api/cards/${cardId}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    const controller=requests.current;
+    if(!controller||controller.signal.aborted)throw new Error("Editor closed");
+    const res=await fetch(`/api/cards/${cardId}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(data),signal:controller.signal});
     if(!res.ok)throw new Error("Failed to save task");
     const card=await res.json() as Card;
-    client.setQueryData(["my-work",userId,"editor",item.id],(old:typeof details.data)=>old?{...old,card}:old);
+    if(controller.signal.aborted)throw new Error("Editor closed");
+    client.setQueryData(["my-work",userId,"editor",item.id],(old:typeof details.data)=>old?{...old,card:{...old.card,...card}}:old);
     await Promise.all([onRefresh(),client.invalidateQueries({queryKey:["board",item.board_id]})]);
   }
   async function remove(cardId:string){
-    const res=await fetch(`/api/cards/${cardId}`,{method:"DELETE"});if(!res.ok)throw new Error("Failed to delete task");
+    const controller=requests.current;
+    if(!controller||controller.signal.aborted)throw new Error("Editor closed");
+    const res=await fetch(`/api/cards/${cardId}`,{method:"DELETE",signal:controller.signal});if(!res.ok)throw new Error("Failed to delete task");
+    if(controller.signal.aborted)throw new Error("Editor closed");
     await Promise.all([onRefresh(),client.invalidateQueries({queryKey:["board",item.board_id]})]);
   }
   if(details.isPending||details.isError)return <div role={details.isError?"alert":"status"} className="fixed bottom-5 right-5 z-50 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-background p-4 shadow-lg"><p className="mb-2 text-sm">{details.isError?"Unable to open this task. It may have been removed or access changed.":"Opening task…"}</p>{details.isError&&<Button size="sm" variant="outline" onClick={()=>void details.refetch()}>Retry opening task</Button>}<Button size="sm" variant="ghost" onClick={onClose}>Close</Button></div>;
