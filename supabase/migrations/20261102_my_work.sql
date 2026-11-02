@@ -1,4 +1,5 @@
 -- Additive migration: deploy before the My Work client. Old writes remain valid.
+begin;
 alter table public.cards add column if not exists is_blocked boolean not null default false;
 alter table public.cards add column if not exists blocked_reason text;
 
@@ -124,3 +125,5 @@ begin
   where id=p_card_id returning * into moved;
   return moved;
 end $$;
+notify pgrst, 'reload schema';
+commit;

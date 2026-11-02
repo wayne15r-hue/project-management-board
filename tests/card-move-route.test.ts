@@ -51,3 +51,12 @@ it("rejects empty block reasons before reads and sends valid block metadata atom
   expect(state.moves).toMatchObject([{ args: { p_updates: { is_blocked: true, blocked_reason: "Waiting" } } }]);
   expect(state.writes).toEqual([]);
 });
+it("writes ordinary block edits and explicitly clears the reason on unblock", async () => {
+  const call = (body: unknown) => PATCH(new Request("https://app.test", { method: "PATCH", body: JSON.stringify(body) }), { params: Promise.resolve({ cardId: "card" }) });
+  expect((await call({ is_blocked: true, blocked_reason: "  Waiting  " })).status).toBe(200);
+  expect(state.writes).toMatchObject([{ is_blocked: true, blocked_reason: "Waiting" }]);
+  state.writes=[];
+  expect((await call({ is_blocked: false, blocked_reason: "Stale draft" })).status).toBe(200);
+  expect(state.writes).toMatchObject([{ is_blocked: false, blocked_reason: null }]);
+  expect(state.moves).toEqual([]);
+});

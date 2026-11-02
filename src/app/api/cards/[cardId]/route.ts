@@ -224,6 +224,8 @@ export async function PATCH(
             created_by: data.created_by,
             recurrence_rule: data.recurrence_rule,
             recurrence_parent_id: data.id,
+            is_blocked: false,
+            blocked_reason: null,
           })
           .select()
           .single();

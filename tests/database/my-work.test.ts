@@ -79,3 +79,12 @@ it("records an initially blocked direct insertion and rejects null/oversized rea
   const id=(inserted.rows[0] as {id:string}).id;
   expect((await db.query("select actor_id,action from activity_log where card_id=$1",[id])).rows).toEqual([{actor_id:uid(1),action:"blocked"}]);
 });
+it("rolls back the entire migration on a deployment failure", async () => {
+  const migration=fs.readFileSync("supabase/migrations/20261102_my_work.sql","utf8");
+  const broken=migration.replace(/commit;\s*$/i,"alter table public.cards add column rollback_probe integer; select 1/0; commit;");
+  await expect(db.exec(broken)).rejects.toThrow(/division by zero/);
+  await db.exec("rollback");
+  expect((await db.query("select column_name from information_schema.columns where table_name='cards' and column_name='rollback_probe'")).rows).toEqual([]);
+  expect((await db.query("select is_blocked,blocked_reason from cards where id=$1",[card])).rows).toEqual([{is_blocked:true,blocked_reason:"Dependency"}]);
+  await db.exec(migration);
+});
