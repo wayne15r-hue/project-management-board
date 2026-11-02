@@ -78,5 +78,5 @@ insert into public.ai_usage(user_id,feature,model) values ('00000000-0000-4000-8
 export async function asUser(db: PGlite, user: number, sql: string, values: unknown[] = []) {
   await db.exec(`set role authenticated; set request.jwt.claim.sub='${uid(user)}';`);
   try { return await db.query(sql,values); }
-  finally { await db.exec("reset role"); }
+  finally { await db.exec("reset role; reset request.jwt.claim.sub"); }
 }

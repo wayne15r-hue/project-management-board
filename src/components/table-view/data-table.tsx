@@ -1,4 +1,6 @@
 "use client";
+import { responseError } from "@/lib/response-error";
+
 
 import { useMemo, useState } from "react";
 import { format, isPast, isToday } from "date-fns";
@@ -123,10 +125,10 @@ export function TableView({ board, members, onRefresh }: TableViewProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to update card");
+      if (!res.ok) throw await responseError(res, "Failed to update card");
       onRefresh();
     } catch (error) {
-      toast.error("Failed to update card");
+      toast.error(error instanceof Error ? error.message : "Failed to update card");
       throw error;
     }
   }

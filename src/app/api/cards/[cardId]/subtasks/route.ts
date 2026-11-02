@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 import { z } from "zod/v4";
 
 const createSchema = z.object({
@@ -26,7 +27,7 @@ export async function GET(
     .eq("card_id", cardId)
     .order("position");
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }
 
@@ -67,7 +68,7 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -85,7 +86,7 @@ export async function PATCH(request: Request) {
         .eq("id", u.id);
       if (reorderError) {
         console.error('[cards/[cardId]/subtasks PATCH] reorder update failed:', reorderError);
-        return NextResponse.json({ error: reorderError.message }, { status: 500 });
+        return workflowErrorResponse(reorderError);
       }
     }
     return NextResponse.json({ success: true });
@@ -108,7 +109,7 @@ export async function PATCH(request: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }
 
@@ -116,6 +117,6 @@ export async function DELETE(request: Request) {
   const supabase = await createClient();
   const { id } = await request.json();
   const { error } = await supabase.from("subtasks").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json({ success: true });
 }

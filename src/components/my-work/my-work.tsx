@@ -1,4 +1,6 @@
 "use client";
+import { responseError } from "@/lib/response-error";
+
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -73,6 +75,7 @@ function MyWorkContent({userId}:{userId:string}) {
     ["Due Today",data?.counts.dueToday,CalendarDays],
     ["Blocked",data?.counts.blocked,AlertCircle],
     ["Total Open",data?.counts.totalOpen,CheckSquare],
+    ["Pending My Review",data?.counts.pendingMyReview??0,CheckSquare],
   ] as const;
   const sections=tab==="mine"?groups.map(([key,label])=>({label,items:data?.items.filter(item=>item.group===key)??[]})):[{label:"Needs Attention",items:data?.items??[]}];
   return <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
@@ -90,8 +93,8 @@ function MyWorkContent({userId}:{userId:string}) {
       }}>{label}</button>)}
     </div>
     <div role="tabpanel" id="work-panel" aria-labelledby={`work-tab-${tab}`}>
-      <p className="mb-4 text-sm text-muted-foreground">{tab==="mine"?"Open tasks assigned to you.":"Overdue or blocked tasks assigned to you, plus tasks on boards you own."}</p>
-      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <p className="mb-4 text-sm text-muted-foreground">{tab==="mine"?"Open tasks assigned to you.":"Overdue or blocked tasks assigned to you or on boards you own, plus pending reviews assigned to you."}</p>
+      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
         {countItems.map(([label,value,Icon])=><div key={label} className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4"/>{label}</div><p className="mt-2 text-2xl font-semibold">{work.isError?"—":value??"…"}</p></div>)}
       </div>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
@@ -100,7 +103,7 @@ function MyWorkContent({userId}:{userId:string}) {
       </div>
       {work.isPending&&<div role="status" className="rounded-xl border border-border p-8 text-sm text-muted-foreground">Loading your work…</div>}
       {work.isError?<div role="alert" className="rounded-xl border border-destructive/30 p-6"><p className="mb-3 text-sm">We couldn&apos;t load your work. Your tasks have not changed.</p><Button variant="outline" onClick={()=>void work.refetch()}>Retry</Button></div>:data&&<>
-        {data.total===0?<div className="rounded-xl border border-dashed border-border p-10 text-center"><CheckSquare className="mx-auto mb-3 h-7 w-7 text-muted-foreground"/><p className="font-medium">{search||board?"No matching tasks":tab==="attention"?"Nothing needs attention":"No open assignments"}</p><p className="mt-2 text-sm text-muted-foreground">{search||board?"Try another search or board.":tab==="attention"?"No overdue or blocked tasks in this view.":"Tasks assigned to you will appear here."}</p></div>:sections.filter(section=>section.items.length>0).map(section=><section key={section.label} className="mb-6"><h2 className="mb-3 text-sm font-semibold">{section.label}</h2><ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">{section.items.map(item=><WorkRow key={item.id} item={item} timezone={timezone} onOpen={()=>setSelected(item)}/>)}</ul></section>)}
+        {data.total===0?<div className="rounded-xl border border-dashed border-border p-10 text-center"><CheckSquare className="mx-auto mb-3 h-7 w-7 text-muted-foreground"/><p className="font-medium">{search||board?"No matching tasks":tab==="attention"?"Nothing needs attention":"No open assignments"}</p><p className="mt-2 text-sm text-muted-foreground">{search||board?"Try another search or board.":tab==="attention"?"No overdue, blocked or pending review tasks in this view.":"Tasks assigned to you will appear here."}</p></div>:sections.filter(section=>section.items.length>0).map(section=><section key={section.label} className="mb-6"><h2 className="mb-3 text-sm font-semibold">{section.label}</h2><ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">{section.items.map(item=><WorkRow key={item.id} item={item} timezone={timezone} onOpen={()=>setSelected(item)}/>)}</ul></section>)}
         {data.total>0&&<div className="flex flex-wrap items-center justify-between gap-3 text-sm"><p className="text-muted-foreground">{(page-1)*50+1}–{Math.min(page*50,data.total)} of {data.total} tasks</p><div className="flex items-center gap-2"><Button variant="outline" size="sm" aria-label="Previous page" disabled={page===1||work.isFetching} onClick={()=>setPage(p=>p-1)}>Previous</Button><span>Page {page}</span><Button variant="outline" size="sm" aria-label="Next page" disabled={page*50>=data.total||work.isFetching} onClick={()=>setPage(p=>p+1)}>Next</Button></div></div>}
       </>}
     </div>
@@ -115,7 +118,7 @@ function WorkRow({item,timezone,onOpen}:{item:MyWorkItem;timezone:string;onOpen:
       {item.is_blocked&&<p className="mt-2 whitespace-pre-wrap break-words text-xs text-muted-foreground">{item.blocked_reason}</p>}
       <Link href={`/dashboard/board/${item.board_id}?card=${item.id}`} className="mt-2 inline-block text-xs text-muted-foreground underline underline-offset-2">Open Board<span className="sr-only"> for {item.title}</span></Link>
     </div>
-    <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs"><span className={cn("rounded-md px-2 py-1 capitalize",item.priority==="high"?"bg-orange-500/10 text-orange-700 dark:text-orange-300":"bg-muted text-muted-foreground")}>{item.priority}</span>{item.is_overdue&&<span className="rounded-md bg-destructive/10 px-2 py-1 text-destructive">Overdue</span>}{item.is_blocked&&<span className="rounded-md bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-300">Blocked</span>}<span className="text-muted-foreground">{item.due_date?new Intl.DateTimeFormat(undefined,{timeZone:timezone,day:"numeric",month:"short",year:"numeric"}).format(new Date(item.due_date)):"No due date"}</span></div>
+    <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs">{item.pending_my_review&&<span className="rounded-md bg-primary/10 px-2 py-1 text-primary">Your review</span>}{item.approval_status&&item.approval_status!=="not_requested"&&<span className="rounded-md bg-muted px-2 py-1 capitalize">{item.approval_status.replaceAll("_"," ")}</span>}<span className={cn("rounded-md px-2 py-1 capitalize",item.priority==="high"?"bg-orange-500/10 text-orange-700 dark:text-orange-300":"bg-muted text-muted-foreground")}>{item.priority}</span>{item.is_overdue&&<span className="rounded-md bg-destructive/10 px-2 py-1 text-destructive">Overdue</span>}{item.is_blocked&&<span className="rounded-md bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-300">Blocked</span>}<span className="text-muted-foreground">{item.due_date?new Intl.DateTimeFormat(undefined,{timeZone:timezone,day:"numeric",month:"short",year:"numeric"}).format(new Date(item.due_date)):"No due date"}</span></div>
   </li>;
 }
 
@@ -139,7 +142,7 @@ function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:stri
     const controller=requests.current;
     if(!controller||controller.signal.aborted)throw new Error("Editor closed");
     const res=await fetch(`/api/cards/${cardId}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(data),signal:controller.signal});
-    if(!res.ok)throw new Error("Failed to save task");
+    if(!res.ok)throw await responseError(res,"Failed to save task");
     const card=await res.json() as Card;
     if(controller.signal.aborted)throw new Error("Editor closed");
     client.setQueryData(["my-work",userId,"editor",item.id],(old:typeof details.data)=>old?{...old,card:{...old.card,...card}}:old);

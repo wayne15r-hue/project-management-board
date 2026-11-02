@@ -1,4 +1,6 @@
 "use client";
+import { responseError } from "@/lib/response-error";
+
 
 import { useEffect, useState, useRef } from "react";
 import {
@@ -125,10 +127,10 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
     try {
       await persistBoardMove(finalColumns, activeId);
       await onRefresh();
-    } catch {
+    } catch (error) {
       columnsRef.current = snapshot;
       setColumns(snapshot);
-      toast.error("Failed to save card position");
+      toast.error(error instanceof Error ? error.message : "Failed to save card position");
       onRefresh();
     } finally {
       savingMove.current = false;
@@ -167,7 +169,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to update card");
+      if (!res.ok) throw await responseError(res, "Failed to update card");
       const updatedCard = await res.json();
 
       setColumns((prev) =>
@@ -182,7 +184,7 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
       );
       onRefresh();
     } catch (error) {
-      toast.error("Failed to update card");
+      toast.error(error instanceof Error ? error.message : "Failed to update card");
       throw error;
     }
   }
@@ -213,14 +215,14 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ columns: [{ id: columnId, name }] }),
       });
-      if (!res.ok) throw new Error("Failed to rename column");
+      if (!res.ok) throw await responseError(res, "Failed to rename column");
       setColumns((prev) =>
         prev.map((col) =>
           col.id === columnId ? { ...col, name } : col
         )
       );
-    } catch {
-      toast.error("Failed to rename column");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to rename column");
     }
   }
 
@@ -235,10 +237,10 @@ export function KanbanBoard({ board, members, onRefresh }: KanbanBoardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ columnId }),
       });
-      if (!res.ok) throw new Error("Failed to delete column");
+      if (!res.ok) throw await responseError(res, "Failed to delete column");
       onRefresh();
-    } catch {
-      toast.error("Failed to delete column");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete column");
     }
   }
 
@@ -356,12 +358,12 @@ function AddColumnButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw await responseError(res,"Failed to add column");
       setName("");
       setIsAdding(false);
       onRefresh();
-    } catch {
-      toast.error("Failed to add column");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add column");
     }
   }
 

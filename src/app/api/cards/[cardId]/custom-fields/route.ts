@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 import { z } from "zod/v4";
 
 const setFieldValueSchema = z.object({
@@ -19,7 +20,7 @@ export async function GET(
     .select("*, field_definition:custom_field_definitions(*)")
     .eq("card_id", cardId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }
 
@@ -49,6 +50,6 @@ export async function PUT(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
   return NextResponse.json(data);
 }

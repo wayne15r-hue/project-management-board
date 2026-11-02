@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Check, AtSign, UserPlus, MessageSquare } from "lucide-react";
-import { toast } from "sonner";
+
 import { createClient } from "@/lib/supabase/client";
 import {
   Popover,
@@ -24,7 +24,7 @@ interface Notification {
   id: string;
   recipient_id: string;
   actor_id: string | null;
-  type: "assignment" | "mention" | "comment";
+  type: "assignment" | "mention" | "comment" | "review_requested" | "review_approved" | "review_changes_requested" | "review_withdrawn" | "review_invalidated" | "due_today" | "overdue" | "escalation";
   card_id: string | null;
   board_id: string | null;
   activity_log_id: string | null;
@@ -64,153 +64,58 @@ function iconFor(type: Notification["type"]) {
   return <MessageSquare className="h-3 w-3" />;
 }
 
-export function NotificationBell({ userId }: { userId: string }) {
+export function NotificationBell({userId}:{userId:string}) { return <NotificationBellContent key={userId} userId={userId}/>; }
+function NotificationBellContent({ userId }: { userId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
-  const openRef = useRef(false);
-
-  useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json();
-      setNotifications(data.notifications ?? []);
-      setUnread(data.unread_count ?? 0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${userId}`,
-        },
-        async (payload) => {
-          const row = payload.new as Notification;
-          // Fetch actor + card_title for display
-          let actor: Actor | null = null;
-          let card_title: string | null = null;
-          if (row.actor_id) {
-            const { data } = await supabase
-              .from("profiles")
-              .select("id, full_name, avatar_url, email")
-              .eq("id", row.actor_id)
-              .single();
-            actor = data as Actor | null;
-          }
-          if (row.card_id) {
-            const { data } = await supabase
-              .from("cards")
-              .select("title")
-              .eq("id", row.card_id)
-              .single();
-            card_title = data?.title ?? null;
-          }
-          const full: Notification = { ...row, actor, card_title };
-          setNotifications((prev) =>
-            prev.some((n) => n.id === full.id) ? prev : [full, ...prev]
-          );
-          if (!full.read_at) setUnread((c) => c + 1);
-
-          if (!openRef.current) {
-            toast(full.title, {
-              description: full.body ?? undefined,
-              action: full.card_id && full.board_id
-                ? {
-                    label: "View",
-                    onClick: () =>
-                      router.push(
-                        `/dashboard/board/${full.board_id}?card=${full.card_id}`
-                      ),
-                  }
-                : undefined,
-            });
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = payload.new as Notification;
-          setNotifications((prev) =>
-            prev.map((n) =>
-              n.id === row.id ? { ...n, read_at: row.read_at } : n
-            )
-          );
-          setUnread((prev) => {
-            // recompute from state on next tick
-            return prev; // handled by load() guarded below
-          });
-          // Re-sync count to be safe
-          fetch("/api/notifications")
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-              if (d?.unread_count !== undefined) setUnread(d.unread_count);
-            });
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, router]);
-
-  async function handleClickNotification(n: Notification) {
-    if (!n.read_at) {
-      await fetch(`/api/notifications/${n.id}/read`, { method: "POST" });
-      setNotifications((prev) =>
-        prev.map((x) =>
-          x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x
-        )
-      );
-      setUnread((c) => Math.max(0, c - 1));
-    }
-    setOpen(false);
-    if (n.board_id && n.card_id) {
-      router.push(`/dashboard/board/${n.board_id}?card=${n.card_id}`);
-    } else if (n.board_id) {
-      router.push(`/dashboard/board/${n.board_id}`);
-    }
+  const [error,setError]=useState("");
+  const [writing,setWriting]=useState(false);
+  const session=useRef<{active:boolean;controller:AbortController;sequence:number}|null>(null);
+  const load=useCallback(async()=>{
+    const current=session.current;if(!current?.active)return;
+    const sequence=++current.sequence;
+    try{
+      const res=await fetch("/api/notifications",{signal:current.controller.signal,cache:"no-store"});
+      if(!res.ok)throw new Error("Unable to load notifications. Please retry.");
+      const data=await res.json();
+      if(!current.active||sequence!==current.sequence)return;
+      setNotifications(data.notifications??[]);setUnread(data.unread_count??0);setError("");
+    }catch(err){if(current.active&&sequence===current.sequence)setError(err instanceof Error?err.message:"Unable to load notifications.");}
+    finally{if(current.active&&sequence===current.sequence)setLoading(false);}
+  },[]);
+  useEffect(()=>{
+    const current={active:true,controller:new AbortController(),sequence:0};session.current=current;
+    void load();
+    const supabase=createClient();
+    const channel=supabase.channel(`notifications-${userId}`).on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`recipient_id=eq.${userId}`},()=>{if(current.active)void load();}).subscribe((status)=>{if(status==="SUBSCRIBED"&&current.active)void load();});
+    const refresh=()=>{if(current.active)void load();};
+    window.addEventListener("focus",refresh);window.addEventListener("online",refresh);
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
+      if(next?.user.id===userId)return;current.active=false;current.controller.abort();setNotifications([]);setUnread(0);setOpen(false);setError("");
+    });
+    return()=>{current.active=false;current.controller.abort();subscription.unsubscribe();void supabase.removeChannel(channel);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);};
+  },[userId,load]);
+  async function markRead(url:string){
+    const current=session.current;if(!current?.active||writing)return false;
+    setWriting(true);setError("");
+    try{const res=await fetch(url,{method:"POST",signal:current.controller.signal});if(!res.ok)throw new Error("Unable to mark notifications read. Please retry.");if(!current.active)return false;await load();return true;}
+    catch(err){if(current.active)setError(err instanceof Error?err.message:"Unable to mark notifications read.");return false;}
+    finally{if(current.active)setWriting(false);}
   }
-
-  async function handleMarkAllRead() {
-    await fetch("/api/notifications/read-all", { method: "POST" });
-    const now = new Date().toISOString();
-    setNotifications((prev) =>
-      prev.map((n) => (n.read_at ? n : { ...n, read_at: now }))
-    );
-    setUnread(0);
+  async function handleClickNotification(n:Notification){
+    const current=session.current;
+    if(!n.read_at&&!await markRead(`/api/notifications/${n.id}/read`))return;
+    if(!current?.active)return;setOpen(false);
+    if(n.board_id)router.push(`/dashboard/board/${n.board_id}${n.card_id?`?card=${n.card_id}`:""}`);
   }
-
+  async function handleMarkAllRead(){await markRead("/api/notifications/read-all");}
   const badge = unread > 99 ? "99+" : String(unread);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={value=>{setOpen(value);if(value)void load();}}>
       <PopoverTrigger
         render={
           <button
@@ -227,13 +132,13 @@ export function NotificationBell({ userId }: { userId: string }) {
           </button>
         }
       />
-      <PopoverContent align="end" className="w-[360px] p-0">
+      <PopoverContent align="end" className="w-[min(360px,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
           <p className="text-[13px] font-semibold">Notifications</p>
           {unread > 0 && (
             <button
               type="button"
-              onClick={handleMarkAllRead}
+              onClick={handleMarkAllRead} disabled={writing}
               className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
             >
               <Check className="h-3 w-3" />
@@ -241,7 +146,7 @@ export function NotificationBell({ userId }: { userId: string }) {
             </button>
           )}
         </div>
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-[420px] overflow-y-auto">{error&&<div role="alert" className="p-3 text-sm"><p>{error}</p><button type="button" className="mt-2 underline" onClick={()=>void load()}>Retry loading notifications</button></div>}
           {loading ? (
             <div className="space-y-1 p-2">
               {Array.from({ length: 4 }).map((_, i) => (
