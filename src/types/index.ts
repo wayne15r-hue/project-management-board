@@ -59,6 +59,8 @@ export interface Card {
   recurrence_rule: RecurrenceRule | null;
   recurrence_parent_id: string | null;
   cover_color: string | null;
+  is_blocked?: boolean;
+  blocked_reason?: string | null;
   assignee?: Profile | null;
   custom_field_values?: CustomFieldValue[];
   subtasks?: Subtask[];

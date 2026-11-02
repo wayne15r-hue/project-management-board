@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CardDetailDialog } from "../../src/components/board/card-detail-dialog";
 import type { Card } from "../../src/types";
 
@@ -15,6 +15,36 @@ vi.mock("@/components/ai/ai-writing-assistant", () => ({AIWritingAssistant: () =
 const card = {id:"one",title:"Original",description:null,priority:"medium",column_id:"a",created_at:"2026-01-01"} as Card;
 afterEach(cleanup);
 describe("card editor write failure", () => {
+  it("never dispatches queued saves after the editor unmounts on account switch", async () => {
+    let finish!:()=>void;
+    const update=vi.fn().mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;})).mockResolvedValue(undefined);
+    const view=render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);
+    const title=screen.getByPlaceholderText("Untitled");
+    fireEvent.change(title,{target:{value:"First update"}});fireEvent.blur(title);
+    await waitFor(()=>expect(update).toHaveBeenCalledTimes(1));
+    fireEvent.change(title,{target:{value:"Queued update"}});fireEvent.blur(title);
+    view.unmount();await act(async()=>finish());
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+  it("requires a reason to block, retains it after failure and retries the same update", async () => {
+    const update=vi.fn().mockRejectedValueOnce(new Error("500")).mockResolvedValue(undefined);
+    render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button",{name:"Mark blocked"}));
+    expect(update).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Blocked reason"),{target:{value:"  Waiting for supplier  "}});
+    fireEvent.click(screen.getByRole("button",{name:"Save blocked status"}));
+    await screen.findByText("Save failed");
+    expect((screen.getByLabelText("Blocked reason") as HTMLTextAreaElement).value).toBe("Waiting for supplier");
+    fireEvent.click(screen.getByText("Retry"));
+    await screen.findByText("Saved");
+    expect(update).toHaveBeenLastCalledWith("one",{is_blocked:true,blocked_reason:"Waiting for supplier"});
+  });
+  it("clears the blocked reason when unblocking", async () => {
+    const update=vi.fn().mockResolvedValue(undefined);
+    render(<CardDetailDialog card={{...card,is_blocked:true,blocked_reason:"Supplier"}} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button",{name:"Unblock task"}));
+    await waitFor(()=>expect(update).toHaveBeenCalledWith("one",{is_blocked:false,blocked_reason:null}));
+  });
   it("retains edited input and shows failure/retry, never Saved, on a rejected update", async () => {
     const update=vi.fn().mockRejectedValueOnce(new Error("403")).mockResolvedValue(undefined);
     render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);

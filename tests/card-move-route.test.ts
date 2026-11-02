@@ -40,3 +40,23 @@ it("returns failed transaction errors without a later direct card update", async
   expect((await invoke()).status).toBe(400);
   expect(state.writes).toEqual([]);
 });
+it("rejects empty block reasons before reads and sends valid block metadata atomically", async () => {
+  for (const blocked_reason of [undefined, "   ", "x".repeat(501)]) {
+    const response = await PATCH(new Request("https://app.test", { method: "PATCH", body: JSON.stringify({ is_blocked: true, blocked_reason }) }), { params: Promise.resolve({ cardId: "card" }) });
+    expect(response.status).toBe(400);
+  }
+  expect(state.reads).toBe(0);
+  const response = await PATCH(new Request("https://app.test", { method: "PATCH", body: JSON.stringify({ column_id: newColumn, is_blocked: true, blocked_reason: "  Waiting  " }) }), { params: Promise.resolve({ cardId: "card" }) });
+  expect(response.status).toBe(200);
+  expect(state.moves).toMatchObject([{ args: { p_updates: { is_blocked: true, blocked_reason: "Waiting" } } }]);
+  expect(state.writes).toEqual([]);
+});
+it("writes ordinary block edits and explicitly clears the reason on unblock", async () => {
+  const call = (body: unknown) => PATCH(new Request("https://app.test", { method: "PATCH", body: JSON.stringify(body) }), { params: Promise.resolve({ cardId: "card" }) });
+  expect((await call({ is_blocked: true, blocked_reason: "  Waiting  " })).status).toBe(200);
+  expect(state.writes).toMatchObject([{ is_blocked: true, blocked_reason: "Waiting" }]);
+  state.writes=[];
+  expect((await call({ is_blocked: false, blocked_reason: "Stale draft" })).status).toBe(200);
+  expect(state.writes).toMatchObject([{ is_blocked: false, blocked_reason: null }]);
+  expect(state.moves).toEqual([]);
+});

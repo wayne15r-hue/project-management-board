@@ -16,6 +16,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import {
   Calendar as CalendarIcon,
   User,
@@ -111,6 +112,9 @@ export function CardDetailDialog({
   const [cardLabels, setCardLabels] = useState<Label[]>([]);
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(null);
   const [coverColor, setCoverColor] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockedReason, setBlockedReason] = useState("");
+  const [editingBlock, setEditingBlock] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -122,6 +126,12 @@ export function CardDetailDialog({
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveLifetime = useRef({ active: true });
+  useEffect(() => {
+    const lifetime = { active: true };
+    saveLifetime.current = lifetime;
+    return () => { lifetime.active = false; };
+  }, []);
 
   useEffect(() => {
     if (card && card.id !== lastCardId.current) {
@@ -138,6 +148,9 @@ export function CardDetailDialog({
       setAssigneeId(card.assignee_id || "");
       setRecurrenceRule(card.recurrence_rule || null);
       setCoverColor(card.cover_color || null);
+      setIsBlocked(card.is_blocked ?? false);
+      setBlockedReason(card.blocked_reason || "");
+      setEditingBlock(false);
       setCardLabels(
         (card.card_labels || [])
           .map((cl) => cl.label)
@@ -159,9 +172,11 @@ export function CardDetailDialog({
       failedUpdates.current = { ...failedUpdates.current, ...updates };
       const sequence = ++saveSequence.current;
       const cardId = card.id;
+      const lifetime = saveLifetime.current;
       const payload = { ...failedUpdates.current };
       setSaveStatus("saving");
       const request = saveQueue.current.then(async () => {
+        if (!lifetime.active || lastCardId.current !== cardId) return;
         try {
           await onUpdate(cardId, payload);
           if (lastCardId.current !== cardId || sequence !== saveSequence.current) return;
@@ -579,6 +594,38 @@ export function CardDetailDialog({
               </Popover>
             </PropertyRow>
           </div>
+
+          <Separator className="my-7" />
+
+          <section aria-label="Blocked status" className="rounded-lg border border-border p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">{isBlocked ? "Blocked" : "Blocked status"}</h3>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditingBlock(true)}>
+                  {isBlocked ? "Edit blocked reason" : "Mark blocked"}
+                </Button>
+                {isBlocked && <Button type="button" variant="outline" size="sm" onClick={() => {
+                  setIsBlocked(false); setBlockedReason(""); setEditingBlock(false);
+                  void performSave({is_blocked:false,blocked_reason:null});
+                }}>Unblock task</Button>}
+              </div>
+            </div>
+            {isBlocked && !editingBlock && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">{blockedReason}</p>}
+            {editingBlock && <div className="mt-3 space-y-2">
+              <label htmlFor={`blocked-reason-${card.id}`} className="text-sm">Blocked reason</label>
+              <textarea id={`blocked-reason-${card.id}`} value={blockedReason} maxLength={500}
+                onChange={e => setBlockedReason(e.target.value)}
+                className="min-h-20 w-full rounded-md border border-input bg-background p-2 text-sm"
+                placeholder="What is preventing this task from moving forward?" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" disabled={!blockedReason.trim()} onClick={() => {
+                  const reason=blockedReason.trim(); setBlockedReason(reason); setIsBlocked(true);
+                  void performSave({is_blocked:true,blocked_reason:reason});
+                }}>Save blocked status</Button>
+                <span className="text-xs text-muted-foreground">{blockedReason.length}/500</span>
+              </div>
+            </div>}
+          </section>
 
           <Separator className="my-7" />
 

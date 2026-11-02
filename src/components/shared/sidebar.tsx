@@ -23,6 +23,7 @@ import {
   LogOut,
   MessageSquare,
   LayoutGrid,
+  ClipboardList,
   Settings,
   MoreHorizontal,
   ChevronsUpDown,
@@ -174,6 +175,13 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarP
         {/* Main nav */}
         <nav className={cn("flex-1 overflow-y-auto pb-2", collapsed ? "px-1.5" : "px-3")}>
           <div className="space-y-0.5">
+            <SidebarLink
+              href="/dashboard/my-work"
+              active={pathname.startsWith("/dashboard/my-work")}
+              icon={<ClipboardList className="h-4 w-4" />}
+              label="My Work"
+              collapsed={collapsed}
+            />
             <SidebarLink
               href="/dashboard"
               active={pathname === "/dashboard"}

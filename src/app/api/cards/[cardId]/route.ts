@@ -16,7 +16,8 @@ export async function GET(
     .select(
       `
       *,
-      assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email)
+      assignee:profiles!cards_assignee_id_fkey (id, full_name, avatar_url, email),
+      card_labels (label:labels (id, name, color))
     `
     )
     .eq("id", cardId)
@@ -51,6 +52,9 @@ export async function PATCH(
   if (parsed.data.assignee_id !== undefined) updateData.assignee_id = parsed.data.assignee_id;
   if (parsed.data.recurrence_rule !== undefined) updateData.recurrence_rule = parsed.data.recurrence_rule;
   if (parsed.data.cover_color !== undefined) updateData.cover_color = parsed.data.cover_color;
+  if (parsed.data.is_blocked !== undefined) updateData.is_blocked = parsed.data.is_blocked;
+  if (parsed.data.blocked_reason !== undefined) updateData.blocked_reason = parsed.data.blocked_reason;
+  if (parsed.data.is_blocked === false) updateData.blocked_reason = null;
 
   // Fetch existing card for change tracking
   const { data: existing, error: existingError } = await supabase
@@ -90,7 +94,7 @@ export async function PATCH(
     .eq("id", cardId)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message }, { status: error.code === "42501" ? 403 : error.code?.startsWith("22") ? 400 : 500 });
 
   // Log activity
   const {
@@ -221,6 +225,8 @@ export async function PATCH(
             created_by: data.created_by,
             recurrence_rule: data.recurrence_rule,
             recurrence_parent_id: data.id,
+            is_blocked: false,
+            blocked_reason: null,
           })
           .select()
           .single();

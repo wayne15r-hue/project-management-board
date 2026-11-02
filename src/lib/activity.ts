@@ -55,6 +55,10 @@ export function describeActivity(
       return `${actorName} moved card to ${changes?.column_name || "another column"}`;
     case "assigned":
       return `${actorName} assigned this card to ${changes?.assignee_name || "someone"}`;
+    case "blocked":
+      return `${actorName} blocked this card${changes?.blocked_reason ? `: ${changes.blocked_reason}` : ""}`;
+    case "unblocked":
+      return `${actorName} unblocked this card`;
     case "deleted":
       return `${actorName} deleted this card`;
     default:

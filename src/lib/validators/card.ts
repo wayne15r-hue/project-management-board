@@ -23,6 +23,10 @@ export const updateCardSchema = z.object({
   assignee_id: z.string().uuid().nullable().optional(),
   recurrence_rule: z.enum(["daily", "weekly", "biweekly", "monthly"]).nullable().optional(),
   cover_color: z.string().nullable().optional(),
+  is_blocked: z.boolean().optional(),
+  blocked_reason: z.string().trim().max(500).nullable().optional(),
+}).refine((data) => data.is_blocked !== true || (typeof data.blocked_reason === "string" && data.blocked_reason.length > 0), {
+  message: "A blocked reason is required", path: ["blocked_reason"],
 });
 
 export const moveCardSchema = z.object({
