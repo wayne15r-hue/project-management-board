@@ -22,6 +22,12 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const { data: employment, error: employmentError } = await supabase.from('employee_records').select('completed_at').eq('user_id', user.id).maybeSingle();
+  if (employmentError) throw new Error('Employee setup is temporarily unavailable.');
+  if (!employment?.completed_at) redirect('/employee-setup');
+  const { data: adminRole, error: adminError } = await supabase.rpc('employee_admin_role');
+  if (adminError) throw new Error('Account permissions are temporarily unavailable.');
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, email")
@@ -38,6 +44,7 @@ export default async function DashboardLayout({
     <CallProvider currentUserId={user.id}>
     <div className="flex h-screen overflow-hidden">
       <Sidebar
+        isEmployeeAdmin={!!adminRole}
         boards={boards || []}
         userEmail={user.email || ""}
         userName={profile?.full_name || null}

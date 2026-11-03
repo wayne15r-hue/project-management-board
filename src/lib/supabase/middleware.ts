@@ -30,5 +30,24 @@ export async function updateSession(request: NextRequest) {
     for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
     return response;
   }
+  const needsSetupCheck = pathname === '/dashboard' || pathname.startsWith('/dashboard/') || /^\/invite\/[^/]+$/.test(pathname)
+    || (pathname.startsWith('/api/') && !pathname.startsWith('/api/employee/') && !pathname.startsWith('/api/admin/'));
+  if (user && needsSetupCheck) {
+    const { data, error } = await supabase.from('employee_records').select('completed_at').eq('user_id', user.id).maybeSingle();
+    let response: NextResponse | null = null;
+    if (error) response = NextResponse.json({ error: 'Employee setup is temporarily unavailable. Please retry.' }, { status: 503 });
+    else if (!data?.completed_at) {
+      if (pathname.startsWith('/api/')) response = NextResponse.json({ error: 'Complete your employee details to continue.', code: 'EMPLOYEE_SETUP_REQUIRED' }, { status: 403 });
+      else {
+        const url = new URL('/employee-setup', request.url);
+        url.searchParams.set('next', pathname + request.nextUrl.search);
+        response = NextResponse.redirect(url);
+      }
+    }
+    if (response) {
+      for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+      return response;
+    }
+  }
   return supabaseResponse;
 }

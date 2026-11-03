@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { EmployeeDetails } from '@/components/employee/employee-details';
+import type { EmployeeState } from '@/types/employee';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -8,6 +10,8 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const {data: employeeState, error: employeeError} = await supabase.rpc('employee_setup_state');
+  if (employeeError) throw new Error('Employee details are temporarily unavailable.');
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -44,6 +48,7 @@ export default async function SettingsPage() {
         aiModel={process.env.AI_MODEL || "openai/gpt-oss-120b"}
         usage={usage ?? []}
       />
+      <EmployeeDetails state={employeeState as EmployeeState}/>
     </div>
   );
 }
