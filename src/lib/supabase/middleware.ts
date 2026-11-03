@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  // This endpoint uses only its own fail-closed bearer authentication.
-  if (pathname === "/api/cron/due-date-reminders") return NextResponse.next({ request });
+  // The cron authenticates its bearer; the two pg_net wakeups perform only
+  // fixed-purpose, service-authorized maintenance and consume no request targets.
+  if (["/api/cron/due-date-reminders", "/api/calls/maintenance", "/api/notifications/maintenance"].includes(pathname)) return NextResponse.next({ request });
   let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

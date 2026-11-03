@@ -23,4 +23,5 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      - run: node scripts/verify-proxy-build.mjs
       - run: npm audit --omit=dev --audit-level=moderate

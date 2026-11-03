@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 const mocks = vi.hoisted(() => ({ getUser:vi.fn(), maybeSingle:vi.fn() }));
 vi.mock('@supabase/ssr', () => ({ createServerClient: () => ({auth:{getUser:mocks.getUser},from:()=>({select:()=>({eq:()=>({maybeSingle:mocks.maybeSingle})})})}) }));
-import { updateSession } from '@/lib/supabase/middleware';
+import { proxy as updateSession } from '@/proxy';
 beforeEach(() => {
   mocks.getUser.mockResolvedValue({data:{user:{id:'user'}}});
   mocks.maybeSingle.mockResolvedValue({data:null,error:null});
@@ -33,4 +33,11 @@ it('allows completed users and keeps recovery accessible',async()=>{
 it('fails closed on a setup lookup error',async()=>{
   mocks.maybeSingle.mockResolvedValue({data:null,error:{message:'failure'}});
   expect((await updateSession(new NextRequest('https://app.test/dashboard'))).status).toBe(503);
+});
+it.each(['/api/calls/maintenance','/api/notifications/maintenance'])('preserves the fixed-purpose scheduler wakeup %s without a session',async path=>{
+  mocks.getUser.mockResolvedValue({data:{user:null}});
+  mocks.getUser.mockClear();
+  expect((await updateSession(new NextRequest('https://app.test'+path))).status).toBe(200);
+  expect(mocks.getUser).not.toHaveBeenCalled();
+  expect((await updateSession(new NextRequest('https://app.test'+path+'/private'))).status).toBe(401);
 });
