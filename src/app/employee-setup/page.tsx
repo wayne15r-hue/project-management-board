@@ -5,7 +5,8 @@ import { internalRedirect } from '@/app/(auth)/redirect';
 import type { EmployeeState } from '@/types/employee';
 export default async function EmployeeSetupPage({searchParams}:{searchParams:Promise<{next?:string}>}) {
   const requested=internalRedirect((await searchParams).next??null);
-  const next=requested==='/dashboard'||requested.startsWith('/dashboard/')||/^\/invite\/[^/?]+(?:\?.*)?$/.test(requested)?requested:'/dashboard';
+  const destinationPath=new URL(requested,'https://internal.invalid').pathname;
+  const next=destinationPath==='/dashboard'||destinationPath.startsWith('/dashboard/')||/^\/invite\/[^/]+$/.test(destinationPath)?requested:'/dashboard';
   const client=await createClient();
   const {data:{user}}=await client.auth.getUser();
   if(!user)redirect('/login?next='+encodeURIComponent('/employee-setup?next='+encodeURIComponent(next)));
