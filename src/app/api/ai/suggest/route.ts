@@ -21,12 +21,12 @@ export async function POST(request: Request) {
 
   const [{ data: labels }, { data: members }] = await Promise.all([
     supabase.from("labels").select("name").eq("board_id", boardId),
-    supabase.from("profiles").select("full_name, email").limit(50),
+    supabase.rpc('account_identity_search',{p_query:'',p_exclude:null,p_limit:50}),
   ]);
 
   const labelNames = (labels ?? []).map((l) => l.name);
   const memberNames = (members ?? [])
-    .map((m) => m.full_name || m.email)
+    .map((m:{full_name:string|null;email:string}) => m.full_name || m.email)
     .filter(Boolean) as string[];
 
   const systemPrompt = SUGGEST_SYSTEM({

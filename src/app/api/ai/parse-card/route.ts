@@ -93,10 +93,7 @@ export async function POST(request: Request) {
         .eq("board_id", boardId)
         .order("position"),
       supabase.from("labels").select("name, color").eq("board_id", boardId),
-      supabase
-        .from("profiles")
-        .select("full_name, email")
-        .limit(50),
+      supabase.rpc('account_identity_search',{p_query:'',p_exclude:null,p_limit:50}),
       supabase
         .from("profiles")
         .select("full_name, email")
@@ -105,7 +102,7 @@ export async function POST(request: Request) {
     ]);
 
   const memberNames = (members ?? [])
-    .map((m) => m.full_name || m.email)
+    .map((m:{full_name:string|null;email:string}) => m.full_name || m.email)
     .filter(Boolean) as string[];
   const currentUserName =
     profile?.full_name || profile?.email || "current user";
