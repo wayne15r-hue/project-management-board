@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import type { z } from 'zod';
 
 export function employeeError(error:{code?:string;message:string}) {
+  if(error.code==='23505'&&error.message.includes('account_employee_id_unique'))return NextResponse.json({error:'This employee ID is already assigned.'},{status:409});
+  if(error.code==='55P03')return NextResponse.json({error:'Wait 60 seconds before requesting another password reset.'},{status:429});
   if(error.code==='23505'&&error.message.includes('employee_department_name'))return NextResponse.json({error:'A department with this name already exists.'},{status:409});
   const status = error.code==='42501'?403:error.code==='23505'||error.code==='40001'?409:error.code==='22023'||error.code==='23503'||error.code==='23514'?400:500;
   return NextResponse.json({error:status===500?'Employee administration is temporarily unavailable. Please retry.':error.message},{status});

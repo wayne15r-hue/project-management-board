@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-const mocks = vi.hoisted(() => ({ getUser:vi.fn(), maybeSingle:vi.fn() }));
-vi.mock('@supabase/ssr', () => ({ createServerClient: () => ({auth:{getUser:mocks.getUser},from:()=>({select:()=>({eq:()=>({maybeSingle:mocks.maybeSingle})})})}) }));
+const mocks = vi.hoisted(() => ({ getUser:vi.fn(), maybeSingle:vi.fn(),rpc:vi.fn() }));
+vi.mock('@supabase/ssr', () => ({ createServerClient: () => ({auth:{getUser:mocks.getUser},rpc:mocks.rpc,from:()=>({select:()=>({eq:()=>({maybeSingle:mocks.maybeSingle})})})}) }));
 import { proxy as updateSession } from '@/proxy';
 beforeEach(() => {
   mocks.getUser.mockResolvedValue({data:{user:{id:'user'}}});
+  mocks.rpc.mockResolvedValue({data:true,error:null});
   mocks.maybeSingle.mockResolvedValue({data:null,error:null});
 });
 it('requires existing and new users to complete setup and preserves deep links',async()=>{
@@ -34,10 +35,21 @@ it('fails closed on a setup lookup error',async()=>{
   mocks.maybeSingle.mockResolvedValue({data:null,error:{message:'failure'}});
   expect((await updateSession(new NextRequest('https://app.test/dashboard'))).status).toBe(503);
 });
-it.each(['/api/calls/maintenance','/api/notifications/maintenance'])('preserves the fixed-purpose scheduler wakeup %s without a session',async path=>{
+it.each(['/api/calls/maintenance','/api/notifications/maintenance','/api/accounts/maintenance'])('preserves the fixed-purpose scheduler wakeup %s without a session',async path=>{
   mocks.getUser.mockResolvedValue({data:{user:null}});
   mocks.getUser.mockClear();
   expect((await updateSession(new NextRequest('https://app.test'+path))).status).toBe(200);
   expect(mocks.getUser).not.toHaveBeenCalled();
   expect((await updateSession(new NextRequest('https://app.test'+path+'/private'))).status).toBe(401);
+});
+it('denies stale inactive sessions before setup and keeps recovery accessible',async()=>{
+ mocks.rpc.mockResolvedValue({data:false,error:null});
+ expect((await updateSession(new NextRequest('https://app.test/api/admin/employees'))).status).toBe(403);
+ expect(new URL((await updateSession(new NextRequest('https://app.test/dashboard'))).headers.get('location')!).pathname).toBe('/account-inactive');
+ expect((await updateSession(new NextRequest('https://app.test/auth/recovery'))).status).toBe(200);
+ expect((await updateSession(new NextRequest('https://app.test/account-inactive'))).status).toBe(200);
+});
+it('fails closed if account status cannot be checked',async()=>{
+ mocks.rpc.mockResolvedValue({data:null,error:{message:'unavailable'}});
+ expect((await updateSession(new NextRequest('https://app.test/dashboard'))).status).toBe(503);
 });

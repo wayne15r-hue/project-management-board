@@ -5,7 +5,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   // The cron authenticates its bearer; the two pg_net wakeups perform only
   // fixed-purpose, service-authorized maintenance and consume no request targets.
-  if (["/api/cron/due-date-reminders", "/api/calls/maintenance", "/api/notifications/maintenance"].includes(pathname)) return NextResponse.next({ request });
+  if (["/api/cron/due-date-reminders", "/api/calls/maintenance", "/api/notifications/maintenance", "/api/accounts/maintenance"].includes(pathname)) return NextResponse.next({ request });
   let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -19,7 +19,8 @@ export async function updateSession(request: NextRequest) {
     } }
   );
   const { data: { user } } = await supabase.auth.getUser();
-  const publicPage = ["/", "/login", "/signup", "/callback", "/reset-password", "/update-password"].includes(pathname) || /^\/invite\/[^/]+$/.test(pathname);
+  const recoveryPage=["/", "/login", "/signup", "/callback", "/reset-password", "/update-password", "/auth/recovery", "/account-inactive"].includes(pathname);
+  const publicPage = recoveryPage || /^\/invite\/[^/]+$/.test(pathname);
   if (!user && !publicPage) {
     const response = pathname.startsWith("/api/")
       ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -30,6 +31,16 @@ export async function updateSession(request: NextRequest) {
         })();
     for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
     return response;
+  }
+  if(user&&!recoveryPage){
+    const {data,error}=await supabase.rpc('account_is_active');
+    if(error||data!==true){
+      const response=error?NextResponse.json({error:'Account status unavailable. Please retry.'},{status:503})
+        :pathname.startsWith('/api/')?NextResponse.json({error:'This account is inactive. Contact your administrator.',code:'ACCOUNT_INACTIVE'},{status:403})
+        :NextResponse.redirect(new URL('/account-inactive',request.url));
+      for(const cookie of supabaseResponse.cookies.getAll())response.cookies.set(cookie);
+      return response;
+    }
   }
   const needsSetupCheck = pathname === '/dashboard' || pathname.startsWith('/dashboard/') || /^\/invite\/[^/]+$/.test(pathname)
     || (pathname.startsWith('/api/') && !pathname.startsWith('/api/employee/') && !pathname.startsWith('/api/admin/'));
