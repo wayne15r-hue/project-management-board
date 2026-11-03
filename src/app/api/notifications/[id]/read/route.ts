@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { uuid } from '@/lib/service-desk/validation';
+import { leaveError } from '@/lib/leave-desk/server';
 
 export async function POST(
   _request: Request,
@@ -14,6 +15,12 @@ export async function POST(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  if(id.startsWith('leave:')){
+    const notificationId=id.slice(6);
+    if(!uuid.safeParse(notificationId).success)return NextResponse.json({error:'Invalid notification'},{status:400});
+    const {error}=await supabase.rpc('leave_mark_notifications_read',{p_id:notificationId});
+    return error?leaveError(error):NextResponse.json({ok:true});
+  }
   if(id.startsWith('desk:')){
     const ticketNotificationId=id.slice(5);
     if(!uuid.safeParse(ticketNotificationId).success)return NextResponse.json({error:'Invalid notification'},{status:400});

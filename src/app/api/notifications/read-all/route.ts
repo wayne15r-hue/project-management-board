@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { leaveError } from '@/lib/leave-desk/server';
 
 export async function POST() {
   const supabase = await createClient();
@@ -15,5 +16,6 @@ export async function POST() {
     console.error("[notifications/read-all POST] update failed:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
+  const {error:leave}=await supabase.rpc('leave_mark_notifications_read',{p_id:null});
+  return leave?leaveError(leave):NextResponse.json({ ok: true });
 }

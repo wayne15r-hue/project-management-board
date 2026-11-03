@@ -1,0 +1,13 @@
+export interface LeaveType { id:string; name:string; enabled:boolean }
+export interface LeaveAllowance { type_id:string; days:number; paid:boolean; tracked:boolean }
+export interface LeavePolicy { id:string; name:string; year_start:1|4; allowances:LeaveAllowance[] }
+export interface LeaveCalendar { id:string; name:string; timezone:string; weekdays:number[] }
+export interface LeaveAssignment { user_id:string; policy_id:string; calendar_id:string }
+export interface LeaveHoliday {id:string;calendar_id:string|null;date:string;name:string;kind:string;source:string;review_status:string}
+export interface LeaveContext { userId:string; admin:boolean; manager:boolean; employees:{id:string;name:string;department_id:string|null}[]; departments:{id:string;name:string;minimum_available?:number}[]; types:LeaveType[]; policies:LeavePolicy[]; calendars:LeaveCalendar[]; assignment:LeaveAssignment|null; holidays?:LeaveHoliday[]; assignments?:LeaveAssignment[] }
+export interface LeaveRequest { id:string; user_id:string; type_id:string; start_date:string; end_date:string; half:'full'|'first'|'second'; status:string; revision:number; reason:string; past_explanation?:string; handover?:string; backup_id?:string|null; reviewer_id?:string|null; can_review?:boolean; created_at:string; total_days?:number }
+export interface LeaveBalance { type_id:string; type_name:string; period_start:string; tracked?:boolean; allowance:number; adjustments:number; used:number; booked:number; pending:number; remaining:number }
+export interface LeaveDetail { request:LeaveRequest; days:{date:string;days:number;period_start?:string}[]; comments:{id:string;actor_id:string;reason?:string;body?:string;created_at:string}[]; files:{id:string;name:string;size:number}[]; history:{id:string;action:string;payload?:{reason?:string};created_at:string}[]; task_warnings?:{id:string;board_id:string;title:string;due_date:string}[] }
+export interface LeaveCalendarData { events:{id:string;user_id:string;name:string;start_date:string;end_date:string;status:string;label:string}[]; holidays:{date:string;name:string;kind:string;source:string;review_status:string}[]; warnings:unknown[] }
+export interface LeaveInsights { balances:LeaveBalance[]; people_away:{user_id:string;name:string;start_date:string;end_date:string}[]; overlaps:unknown[]; pending_count:number; average_wait_days:number; monthly:{month:string;days:number}[]; unresolved_ncns:number }
+export interface LeaveIncident { id:string;user_id:string;date:string;expected_period:string;status:string;comments:string;revision:number;explanation?:string;history?:{id:string;action:string;reason?:string;created_at:string;payload?:{reason?:string}}[] }

@@ -26,6 +26,7 @@ interface Notification {
   actor_id: string | null;
   type: string;
   ticket_id?: string;
+  request_id?: string;
   card_id: string | null;
   board_id: string | null;
   activity_log_id: string | null;
@@ -111,7 +112,8 @@ function NotificationBellContent({ userId }: { userId: string }) {
     const current=session.current;
     if(!n.read_at&&!await markRead(`/api/notifications/${n.id}/read`))return;
     if(!current?.active)return;setOpen(false);
-    if(n.ticket_id)router.push(`/dashboard/service-desk/${n.ticket_id}`);
+    if(n.request_id)router.push(`/dashboard/leave-desk/${n.request_id}`);
+    else if(n.ticket_id)router.push(`/dashboard/service-desk/${n.ticket_id}`);
     else if(n.board_id)router.push(`/dashboard/board/${n.board_id}${n.card_id?`?card=${n.card_id}`:""}`);
   }
   async function handleMarkAllRead(){await markRead("/api/notifications/read-all");}

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { BoardWithDetails, Card, Profile } from "@/types";
 import type { MyWorkItem, MyWorkResponse } from "@/types/my-work";
 import { MyWorkTickets } from '@/components/service-desk/my-work-tickets';
+import { MyWorkLeave } from '@/components/leave-desk/my-work-leave';
 
 async function read<T>(url:string,signal:AbortSignal):Promise<T> {
   const response=await fetch(url,{signal,cache:"no-store"});
@@ -36,7 +37,7 @@ export function MyWork({userId}:{userId:string}) {
     return ()=>subscription.unsubscribe();
   },[client,userId]);
   if(!validAccount)return <p role="status" className="p-6 text-sm">Updating your session…</p>;
-  return <><MyWorkContent key={userId} userId={userId}/><div className="mx-auto w-full max-w-6xl px-4 md:px-6"><MyWorkTickets key={userId} userId={userId}/></div></>;
+  return <><MyWorkContent key={userId} userId={userId}/><div className="mx-auto w-full max-w-6xl px-4 md:px-6"><MyWorkTickets key={userId} userId={userId}/><MyWorkLeave key={`leave-${userId}`} userId={userId}/></div></>;
 }
 
 function MyWorkContent({userId}:{userId:string}) {

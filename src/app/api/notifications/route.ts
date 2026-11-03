@@ -67,8 +67,14 @@ export async function GET() {
   if(ticketAlerts.error||ticketUnread.error)return NextResponse.json({error:'Unable to load notifications'},{status:500});
   const tickets=(ticketAlerts.data??[]).map(n=>({...n,id:`desk:${n.id}`,card_id:null,board_id:null,activity_log_id:null,card_title:null}));
 
+  const [leaveAlerts,leaveUnread]=await Promise.all([
+    supabase.from('leave_notifications').select('id,request_id,recipient_id,actor_id,type,title,body,read_at,created_at').eq('recipient_id',user.id).order('created_at',{ascending:false}).limit(50),
+    supabase.from('leave_notifications').select('*',{count:'exact',head:true}).eq('recipient_id',user.id).is('read_at',null),
+  ]);
+  if(leaveAlerts.error||leaveUnread.error)return NextResponse.json({error:'Unable to load notifications'},{status:500});
+  const leave=(leaveAlerts.data??[]).map(n=>({...n,id:`leave:${n.id}`,actor:null,card_id:null,board_id:null,activity_log_id:null,card_title:null}));
   return NextResponse.json({
-    notifications:[...notifications,...tickets].sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50),
-    unread_count: (count ?? 0)+(ticketUnread.count??0),
-  });
+    notifications:[...notifications,...tickets,...leave].sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50),
+    unread_count: (count ?? 0)+(ticketUnread.count??0)+(leaveUnread.count??0),
+  },{headers:{'Cache-Control':'private, no-store'}});
 }
