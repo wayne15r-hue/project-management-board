@@ -31,3 +31,9 @@ it('opens ticket notifications in Service Desk',async()=>{
  fireEvent.click(await screen.findByRole('button',{name:/SD-000001/}));
  expect(mocks.push).toHaveBeenCalledWith('/dashboard/service-desk/ticket-123');
 });
+it('opens a leave notification in its private request detail',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({notifications:[{id:'leave:alert',request_id:'request-123',title:'Leave request updated',type:'leave_update',read_at:'2026-11-03',created_at:new Date().toISOString(),actor:null}],unread_count:0})})));
+ render(<NotificationBell userId="u"/>);fireEvent.click(screen.getByRole('button',{name:'Notifications'}));
+ fireEvent.click(await screen.findByRole('button',{name:/Leave request updated/}));
+ expect(mocks.push).toHaveBeenCalledWith('/dashboard/leave-desk/request-123');
+});

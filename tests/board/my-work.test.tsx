@@ -6,6 +6,7 @@ import {MyWork} from "@/components/my-work/my-work";
 const auth=vi.hoisted(()=>({listener:null as null|((event:string,session:{user:{id:string}}|null)=>void)}));
 vi.mock("@/lib/supabase/client",()=>({createClient:()=>({auth:{onAuthStateChange:(cb:typeof auth.listener)=>{auth.listener=cb;return {data:{subscription:{unsubscribe:vi.fn()}}};}}})}));
 vi.mock('@/components/service-desk/my-work-tickets',()=>({MyWorkTickets:()=> <div>Service Desk work</div>}));
+vi.mock('@/components/leave-desk/my-work-leave',()=>({MyWorkLeave:()=> <div>LeaveDesk work</div>}));
 vi.mock("@/components/board/card-detail-dialog",()=>({CardDetailDialog:({card,board,onUpdate}:{card:{id:string;title:string;card_labels?:{label:{name:string}}[]};board:{name:string};onUpdate:(id:string,data:unknown)=>Promise<void>})=><div role="dialog" aria-label="Task editor"><p>{board.name} editor</p><p>{card.title}</p>{card.card_labels?.map(({label})=><span key={label.name}>{label.name}</span>)}<button onClick={()=>void onUpdate(card.id,{title:"Updated supplier"})}>Save task</button></div>}));
 const item={id:"one",title:"Call supplier",board_id:"board",column_id:"column",priority:"high",due_date:"2026-11-01T12:00:00Z",is_blocked:true,blocked_reason:"Waiting",board:{id:"board",name:"Operations",owner_id:"user"},column:{id:"column",name:"To Do"},group:"overdue",is_overdue:true,is_due_today:false};
 const result={items:[item],counts:{overdue:1,dueToday:0,blocked:1,totalOpen:51},total:51,page:1,pageSize:50,boards:[{id:"board",name:"Operations"}]};

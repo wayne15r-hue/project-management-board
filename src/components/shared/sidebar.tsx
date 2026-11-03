@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   ClipboardList,
   Ticket,
+  CalendarDays,
   ShieldCheck,
   Settings,
   MoreHorizontal,
@@ -197,6 +198,13 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
               active={pathname.startsWith("/dashboard/service-desk")}
               icon={<Ticket className="h-4 w-4" />}
               label="Service Desk"
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/dashboard/leave-desk"
+              active={pathname.startsWith("/dashboard/leave-desk")}
+              icon={<CalendarDays className="h-4 w-4" />}
+              label="LeaveDesk"
               collapsed={collapsed}
             />
             <SidebarLink

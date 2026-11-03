@@ -1,0 +1,709 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-03",
+  "usage": "Reference overlays only. No automatic company holidays or entitlement grants. Review means compared with official published list, not company approval. Moon-dependent dates may be revised.",
+  "coverage_gaps": [
+    {
+      "kind": "india_regional",
+      "year": 2027,
+      "jurisdiction": "IN-MH",
+      "review_status": "pending_official_source",
+      "source": "https://finance.maharashtra.gov.in/en/notice/maharashtra-holidays/",
+      "notes": "No verified 2027 Maharashtra official list located. This page labels 2026-27 but its end date is 2027-01-01; do not treat it as a full 2027 list. No guessed dates seeded. Admin may import the eventual notification."
+    }
+  ],
+  "lists": [
+    {
+      "id": "in-central-delhi-2026",
+      "kind": "india_central",
+      "year": 2026,
+      "jurisdiction": "IN-DL (central administrative offices)",
+      "source": "https://cag.gov.in/en/pages/single/page-defence-new-delhi-holidaylist",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "CAG lists Muharram as July26/Friday, an inconsistent row. June26/Friday is explicitly corroborated by https://www.iirs.gov.in/holidaycalender and https://www.ursc.gov.in/holidays.jsp; only the corroborated June26 date is seeded. Moon dates subject to revisions.",
+      "holidays": [
+        {
+          "date": "2026-01-26",
+          "name": "Republic Day"
+        },
+        {
+          "date": "2026-03-04",
+          "name": "Holi"
+        },
+        {
+          "date": "2026-03-21",
+          "name": "Id-ul-Fitr"
+        },
+        {
+          "date": "2026-03-26",
+          "name": "Ram Navami"
+        },
+        {
+          "date": "2026-03-31",
+          "name": "Mahavir Jayanti"
+        },
+        {
+          "date": "2026-04-03",
+          "name": "Good Friday"
+        },
+        {
+          "date": "2026-05-01",
+          "name": "Buddha Purnima"
+        },
+        {
+          "date": "2026-05-27",
+          "name": "Id-ul-Zuha (Bakrid)"
+        },
+        {
+          "date": "2026-06-26",
+          "name": "Muharram"
+        },
+        {
+          "date": "2026-08-15",
+          "name": "Independence Day"
+        },
+        {
+          "date": "2026-08-26",
+          "name": "Id-e-Milad"
+        },
+        {
+          "date": "2026-09-04",
+          "name": "Janmashtami"
+        },
+        {
+          "date": "2026-10-02",
+          "name": "Mahatma Gandhi's Birthday"
+        },
+        {
+          "date": "2026-10-20",
+          "name": "Dussehra"
+        },
+        {
+          "date": "2026-11-08",
+          "name": "Diwali"
+        },
+        {
+          "date": "2026-11-24",
+          "name": "Guru Nanak's Birthday"
+        },
+        {
+          "date": "2026-12-25",
+          "name": "Christmas Day"
+        }
+      ]
+    },
+    {
+      "id": "in-restricted-delhi-2026",
+      "kind": "india_restricted",
+      "year": 2026,
+      "jurisdiction": "IN-DL (central restricted reference)",
+      "source": "https://cag.gov.in/en/pages/single/page-defence-new-delhi-holidaylist",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "",
+      "holidays": [
+        {
+          "date": "2026-01-01",
+          "name": "New Year's Day"
+        },
+        {
+          "date": "2026-01-03",
+          "name": "Hazarat Ali's Birthday"
+        },
+        {
+          "date": "2026-01-14",
+          "name": "Makar Sankranti"
+        },
+        {
+          "date": "2026-01-14",
+          "name": "Magha Bihu / Pongal"
+        },
+        {
+          "date": "2026-01-23",
+          "name": "Basant Panchami"
+        },
+        {
+          "date": "2026-02-01",
+          "name": "Guru Ravi Das's Birthday"
+        },
+        {
+          "date": "2026-02-12",
+          "name": "Swami Dayananda Saraswati's Birthday"
+        },
+        {
+          "date": "2026-02-15",
+          "name": "Maha Shivratri"
+        },
+        {
+          "date": "2026-02-19",
+          "name": "Shivaji Jayanti"
+        },
+        {
+          "date": "2026-03-03",
+          "name": "Holika Dahan"
+        },
+        {
+          "date": "2026-03-03",
+          "name": "Dolyatra"
+        },
+        {
+          "date": "2026-03-19",
+          "name": "Chaitra Sukladi / Gudi Padava / Ugadi / Cheti Chand"
+        },
+        {
+          "date": "2026-03-20",
+          "name": "Jamat-Ul-Vida"
+        },
+        {
+          "date": "2026-04-05",
+          "name": "Easter Sunday"
+        },
+        {
+          "date": "2026-04-14",
+          "name": "Vaisakhadi / Visu / Meshadi (Tamil New Year)"
+        },
+        {
+          "date": "2026-04-15",
+          "name": "Vaisakhadi (Bengal) / Bahag Bihu (Assam)"
+        },
+        {
+          "date": "2026-05-09",
+          "name": "Rabindranath Tagore's Birthday"
+        },
+        {
+          "date": "2026-07-16",
+          "name": "Rath Yatra"
+        },
+        {
+          "date": "2026-08-15",
+          "name": "Parsi New Year / Nauraj"
+        },
+        {
+          "date": "2026-08-26",
+          "name": "Onam"
+        },
+        {
+          "date": "2026-08-28",
+          "name": "Raksha Bandhan"
+        },
+        {
+          "date": "2026-09-14",
+          "name": "Ganesh Chaturthi"
+        },
+        {
+          "date": "2026-10-18",
+          "name": "Dussehra (Saptami)"
+        },
+        {
+          "date": "2026-10-19",
+          "name": "Dussehra (Mahashtami)"
+        },
+        {
+          "date": "2026-10-20",
+          "name": "Dussehra (Mahanavmi)"
+        },
+        {
+          "date": "2026-10-26",
+          "name": "Maharishi Valmiki's Birthday"
+        },
+        {
+          "date": "2026-10-29",
+          "name": "Karwa Chouth"
+        },
+        {
+          "date": "2026-11-08",
+          "name": "Naraka Chaturdasi"
+        },
+        {
+          "date": "2026-11-09",
+          "name": "Govardhan Puja"
+        },
+        {
+          "date": "2026-11-11",
+          "name": "Bhai Duj"
+        },
+        {
+          "date": "2026-11-15",
+          "name": "Chhat Puja"
+        },
+        {
+          "date": "2026-11-24",
+          "name": "Guru Teg Bahadur's Martyrdom Day"
+        },
+        {
+          "date": "2026-12-23",
+          "name": "Hazarat Ali's Birthday"
+        },
+        {
+          "date": "2026-12-24",
+          "name": "Christmas Eve"
+        }
+      ]
+    },
+    {
+      "id": "in-central-delhi-2027",
+      "kind": "india_central",
+      "year": 2027,
+      "jurisdiction": "IN-DL (DoPT Annexure I)",
+      "source": "https://master-dopt.digifootprint.gov.in/static/uploads/2026/08/2ffd159748162a48c025f7e6ca5807d5.pdf",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "DoPT OM 16 July 2026, Annexure I. Cross-checked https://pfrda.org.in/documents/33652/0/list_holidays_2027.pdf . Moon-sighting amendments may change dates.",
+      "holidays": [
+        {
+          "date": "2027-01-26",
+          "name": "Republic Day"
+        },
+        {
+          "date": "2027-03-10",
+          "name": "Id-ul-Fitr"
+        },
+        {
+          "date": "2027-03-23",
+          "name": "Holi"
+        },
+        {
+          "date": "2027-03-26",
+          "name": "Good Friday"
+        },
+        {
+          "date": "2027-04-15",
+          "name": "Ram Navami"
+        },
+        {
+          "date": "2027-04-19",
+          "name": "Mahavir Jayanti"
+        },
+        {
+          "date": "2027-05-17",
+          "name": "Id-ul-Zuha (Bakrid)"
+        },
+        {
+          "date": "2027-05-20",
+          "name": "Buddha Purnima"
+        },
+        {
+          "date": "2027-06-16",
+          "name": "Muharram"
+        },
+        {
+          "date": "2027-08-15",
+          "name": "Independence Day"
+        },
+        {
+          "date": "2027-08-15",
+          "name": "Id-e-Milad"
+        },
+        {
+          "date": "2027-08-25",
+          "name": "Janmashtami"
+        },
+        {
+          "date": "2027-10-02",
+          "name": "Mahatma Gandhi's Birthday"
+        },
+        {
+          "date": "2027-10-09",
+          "name": "Dussehra"
+        },
+        {
+          "date": "2027-10-29",
+          "name": "Diwali"
+        },
+        {
+          "date": "2027-11-14",
+          "name": "Guru Nanak's Birthday"
+        },
+        {
+          "date": "2027-12-25",
+          "name": "Christmas Day"
+        }
+      ]
+    },
+    {
+      "id": "in-restricted-delhi-2027",
+      "kind": "india_restricted",
+      "year": 2027,
+      "jurisdiction": "IN-DL (DoPT Annexure II)",
+      "source": "https://master-dopt.digifootprint.gov.in/static/uploads/2026/08/2ffd159748162a48c025f7e6ca5807d5.pdf",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "DoPT Annexure II, cross-checked PFRDA official 13 August 2026 order. Not universal state holidays.",
+      "holidays": [
+        {
+          "date": "2027-01-01",
+          "name": "New Year's Day"
+        },
+        {
+          "date": "2027-01-14",
+          "name": "Makar Sankranti / Magha Bihu"
+        },
+        {
+          "date": "2027-01-15",
+          "name": "Pongal / Guru Gobind Singh's Birthday"
+        },
+        {
+          "date": "2027-02-11",
+          "name": "Basant Panchami"
+        },
+        {
+          "date": "2027-02-19",
+          "name": "Shivaji Jayanti"
+        },
+        {
+          "date": "2027-02-20",
+          "name": "Guru Ravi Das's Birthday"
+        },
+        {
+          "date": "2027-03-02",
+          "name": "Swami Dayananda Saraswati's Birthday"
+        },
+        {
+          "date": "2027-03-05",
+          "name": "Jamat-Ul-Vida"
+        },
+        {
+          "date": "2027-03-06",
+          "name": "Maha Shivratri"
+        },
+        {
+          "date": "2027-03-22",
+          "name": "Holika Dahan / Dolyatra"
+        },
+        {
+          "date": "2027-03-28",
+          "name": "Easter Sunday"
+        },
+        {
+          "date": "2027-04-07",
+          "name": "Chaitra Sukladi / Gudi Padava / Ugadi / Cheti Chand / First Navratra"
+        },
+        {
+          "date": "2027-04-14",
+          "name": "Vaisakhi / Vishu / Meshadi (Tamil New Year)"
+        },
+        {
+          "date": "2027-04-15",
+          "name": "Vaisakhadi (Bengal) / Bahag Bihu (Assam)"
+        },
+        {
+          "date": "2027-05-09",
+          "name": "Rabindranath Tagore's Birthday"
+        },
+        {
+          "date": "2027-07-05",
+          "name": "Rath Yatra"
+        },
+        {
+          "date": "2027-08-15",
+          "name": "Parsi New Year / Navroz"
+        },
+        {
+          "date": "2027-08-17",
+          "name": "Raksha Bandhan"
+        },
+        {
+          "date": "2027-09-04",
+          "name": "Ganesh Chaturthi"
+        },
+        {
+          "date": "2027-09-12",
+          "name": "Onam"
+        },
+        {
+          "date": "2027-10-06",
+          "name": "Dussehra (Saptami)"
+        },
+        {
+          "date": "2027-10-07",
+          "name": "Dussehra (Mahashtami)"
+        },
+        {
+          "date": "2027-10-08",
+          "name": "Dussehra (Mahanavmi)"
+        },
+        {
+          "date": "2027-10-15",
+          "name": "Maharishi Valmiki's Birthday"
+        },
+        {
+          "date": "2027-10-18",
+          "name": "Karwa Chouth"
+        },
+        {
+          "date": "2027-10-28",
+          "name": "Naraka Chaturdasi"
+        },
+        {
+          "date": "2027-10-30",
+          "name": "Govardhan Puja"
+        },
+        {
+          "date": "2027-10-31",
+          "name": "Bhai Duj"
+        },
+        {
+          "date": "2027-11-04",
+          "name": "Chhat Puja"
+        },
+        {
+          "date": "2027-11-24",
+          "name": "Guru Teg Bahadur's Martyrdom Day"
+        },
+        {
+          "date": "2027-12-12",
+          "name": "Hazarat Ali's Birthday"
+        },
+        {
+          "date": "2027-12-24",
+          "name": "Christmas Eve"
+        }
+      ]
+    },
+    {
+      "id": "in-maharashtra-2026",
+      "kind": "india_regional",
+      "year": 2026,
+      "jurisdiction": "IN-MH",
+      "source": "https://www.mmrda.maharashtra.gov.in/en/public-holidays",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "24 listed public holidays; cross-checked Maharashtra Gazette 5 December 2025 https://maharashtra.gov.in/site/Upload/pdf/Public-Holiday-2026.pdf . Does not include bank-only annual closing. State date differences deliberately retained.",
+      "holidays": [
+        {
+          "date": "2026-01-26",
+          "name": "Maharashtra: Republic Day"
+        },
+        {
+          "date": "2026-02-15",
+          "name": "Maharashtra: Mahashivratri"
+        },
+        {
+          "date": "2026-02-19",
+          "name": "Maharashtra: Chhatrapati Shivaji Maharaj Jayanti"
+        },
+        {
+          "date": "2026-03-03",
+          "name": "Maharashtra: Holi (Second Day)"
+        },
+        {
+          "date": "2026-03-19",
+          "name": "Maharashtra: Gudhi Padwa"
+        },
+        {
+          "date": "2026-03-21",
+          "name": "Maharashtra: Ramzan-Id"
+        },
+        {
+          "date": "2026-03-26",
+          "name": "Maharashtra: Ram Navami"
+        },
+        {
+          "date": "2026-03-31",
+          "name": "Maharashtra: Mahavir Janmakalyanak"
+        },
+        {
+          "date": "2026-04-03",
+          "name": "Maharashtra: Good Friday"
+        },
+        {
+          "date": "2026-04-14",
+          "name": "Maharashtra: Dr. Babasaheb Ambedkar Jayanti"
+        },
+        {
+          "date": "2026-05-01",
+          "name": "Maharashtra: Maharashtra Din"
+        },
+        {
+          "date": "2026-05-01",
+          "name": "Maharashtra: Buddha Pournima"
+        },
+        {
+          "date": "2026-05-28",
+          "name": "Maharashtra: Bakri Id"
+        },
+        {
+          "date": "2026-06-26",
+          "name": "Maharashtra: Moharum"
+        },
+        {
+          "date": "2026-08-15",
+          "name": "Maharashtra: Independence Day"
+        },
+        {
+          "date": "2026-08-15",
+          "name": "Maharashtra: Parsi New Year (Shahenshahi)"
+        },
+        {
+          "date": "2026-08-26",
+          "name": "Maharashtra: Id-E-Milad"
+        },
+        {
+          "date": "2026-09-14",
+          "name": "Maharashtra: Ganesh Chaturthi"
+        },
+        {
+          "date": "2026-10-02",
+          "name": "Maharashtra: Mahatma Gandhi Jayanti"
+        },
+        {
+          "date": "2026-10-20",
+          "name": "Maharashtra: Dasara"
+        },
+        {
+          "date": "2026-11-08",
+          "name": "Maharashtra: Diwali Amavasya (Laxmi Pujan)"
+        },
+        {
+          "date": "2026-11-10",
+          "name": "Maharashtra: Diwali (Bali Pratipada)"
+        },
+        {
+          "date": "2026-11-24",
+          "name": "Maharashtra: Guru Nanak Jayanti"
+        },
+        {
+          "date": "2026-12-25",
+          "name": "Maharashtra: Christmas"
+        }
+      ]
+    },
+    {
+      "id": "us-opm-2026",
+      "kind": "us_federal",
+      "year": 2026,
+      "jurisdiction": "US federal (standard Monday-Friday schedule)",
+      "source": "https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "OPM observed schedule: Independence Day observed July3 for statutory July4.",
+      "holidays": [
+        {
+          "date": "2026-01-01",
+          "name": "New Year's Day"
+        },
+        {
+          "date": "2026-01-19",
+          "name": "Birthday of Martin Luther King, Jr."
+        },
+        {
+          "date": "2026-02-16",
+          "name": "Washington's Birthday"
+        },
+        {
+          "date": "2026-05-25",
+          "name": "Memorial Day"
+        },
+        {
+          "date": "2026-06-19",
+          "name": "Juneteenth National Independence Day"
+        },
+        {
+          "date": "2026-07-03",
+          "name": "Independence Day (observed)"
+        },
+        {
+          "date": "2026-09-07",
+          "name": "Labor Day"
+        },
+        {
+          "date": "2026-10-12",
+          "name": "Columbus Day"
+        },
+        {
+          "date": "2026-11-11",
+          "name": "Veterans Day"
+        },
+        {
+          "date": "2026-11-26",
+          "name": "Thanksgiving Day"
+        },
+        {
+          "date": "2026-12-25",
+          "name": "Christmas Day"
+        }
+      ]
+    },
+    {
+      "id": "us-opm-2027",
+      "kind": "us_federal",
+      "year": 2027,
+      "jurisdiction": "US federal (standard Monday-Friday schedule)",
+      "source": "https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "OPM observed schedule: Juneteenth June18 for June19; Independence July5 for July4; Christmas December24 for December25. January1 2028 is observed December31 2027 in OPM 2028 schedule, recorded separately below.",
+      "holidays": [
+        {
+          "date": "2027-01-01",
+          "name": "New Year's Day"
+        },
+        {
+          "date": "2027-01-18",
+          "name": "Birthday of Martin Luther King, Jr."
+        },
+        {
+          "date": "2027-02-15",
+          "name": "Washington's Birthday"
+        },
+        {
+          "date": "2027-05-31",
+          "name": "Memorial Day"
+        },
+        {
+          "date": "2027-06-18",
+          "name": "Juneteenth National Independence Day (observed)"
+        },
+        {
+          "date": "2027-07-05",
+          "name": "Independence Day (observed)"
+        },
+        {
+          "date": "2027-09-06",
+          "name": "Labor Day"
+        },
+        {
+          "date": "2027-10-11",
+          "name": "Columbus Day"
+        },
+        {
+          "date": "2027-11-11",
+          "name": "Veterans Day"
+        },
+        {
+          "date": "2027-11-25",
+          "name": "Thanksgiving Day"
+        },
+        {
+          "date": "2027-12-24",
+          "name": "Christmas Day (observed)"
+        }
+      ]
+    },
+    {
+      "id": "us-opm-2028-observed-in-2027",
+      "kind": "us_federal",
+      "year": 2027,
+      "jurisdiction": "US federal (2028 statutory holiday observed in 2027)",
+      "source": "https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/",
+      "review_status": "reviewed",
+      "reviewed_on": "2026-11-03",
+      "reviewed_by": "Codex source comparison; company adoption requires admin decision",
+      "notes": "OPM 2028 schedule; included because the observed date is in the launch-following calendar year.",
+      "holidays": [
+        {
+          "date": "2027-12-31",
+          "name": "New Year's Day 2028 (observed)"
+        }
+      ]
+    }
+  ]
+}
