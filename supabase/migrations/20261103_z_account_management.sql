@@ -331,7 +331,7 @@ begin
  if exists(select from account_private.operations where target_id=p_target and status in ('pending','running')) then raise exception 'An operation is in progress' using errcode='40001'; end if;
  if p_action<>'reset_password' and (clean->>'expectedRevision')::integer is distinct from s.revision then raise exception 'Account revision changed' using errcode='40001'; end if;
  if (p_action in ('reset_password','deactivate') and s.status<>'active') or (p_action='reactivate' and s.status<>'deactivated')
- or (p_action='delete' and s.status<>'deactivated') then raise exception 'Invalid account status. Deactivate before deletion.' using errcode='22023'; end if;
+ or (p_action='delete' and s.status not in ('deactivated','deleting')) then raise exception 'Invalid account status. Deactivate before deletion.' using errcode='22023'; end if;
  if p_action='delete' then
   select email into actual_email from auth.users where id=p_target;
   if actual_email is null or lower(trim(p_payload->>'confirmationEmail')) is distinct from lower(actual_email) then raise exception 'Confirmation email does not match' using errcode='22023'; end if;
@@ -487,6 +487,11 @@ end $$;
 create or replace function account_private.has_media(p_id uuid) returns boolean language sql stable as $$
  select exists(select from account_private.media m join public.audio_media_cleanup q on q.id=m.cleanup_id where m.operation_id=p_id)
 $$;
+create or replace function public.account_media_pending(p_id uuid,p_lease uuid) returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+ if not public.account_validate_operation(p_id,p_lease) then return true; end if;
+ return account_private.has_media(p_id);
+end $$;
 create or replace function public.account_finish_operation(p_id uuid,p_lease uuid,p_outcome text,p_error text) returns void language plpgsql security definer set search_path=public,pg_temp as $$
 declare o account_private.operations; outcome text;
 begin
@@ -603,7 +608,7 @@ do $$ declare f record;
 begin
  for f in select oid::regprocedure signature,proname from pg_proc where pronamespace='public'::regnamespace and proname like 'account\_%' escape '\' loop
   execute format('revoke all on function %s from public,anon,authenticated,service_role',f.signature);
-  if f.proname in ('account_begin_maintenance','account_claim_operations','account_validate_operation','account_begin_reset','account_prepare_delete','account_finish_operation') then
+  if f.proname in ('account_begin_maintenance','account_claim_operations','account_validate_operation','account_begin_reset','account_media_pending','account_prepare_delete','account_finish_operation') then
    execute format('grant execute on function %s to service_role',f.signature);
   else execute format('grant execute on function %s to authenticated',f.signature); end if;
  end loop;

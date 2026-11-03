@@ -36,4 +36,10 @@ select jsonb_build_object('preserved',true,'accounts',(select count(*) from acco
 `;
 fs.mkdirSync('../admin-qa',{recursive:true});
 fs.writeFileSync('../admin-qa/account-production-release.sql',sql);
+// Compact transfer removes only whole-line comments and whitespace; the reviewed SQL stays above.
+const compact=sql.split('\n').filter(line=>!line.trimStart().startsWith('--')).join(' ').replace(/\s+/g,' ').trim();
+fs.writeFileSync('../admin-qa/account-production-compact.sql',compact);
+let checksum=2166136261;
+for(const character of compact)checksum=Math.imul(checksum^character.charCodeAt(0),16777619)>>>0;
+console.log('Compact transfer:',compact.length,'characters; FNV32:',checksum);
 console.log('Prepared preservation-checked account release:',sql.length,'characters');

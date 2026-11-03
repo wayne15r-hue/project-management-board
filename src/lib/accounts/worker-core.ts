@@ -8,7 +8,7 @@ export interface AccountTransport {
   ban:(userId:string,enabled:boolean)=>Promise<void>;
   prepareDelete:(operation:AccountOperation)=>Promise<DeletePreparation>;
   removeAvatar:(path:string)=>Promise<void>;
-  cleanupMedia:()=>Promise<boolean>;
+  cleanupMedia:(operation:AccountOperation)=>Promise<boolean>;
   deleteAuth:(userId:string)=>Promise<void>;
   finish:(operation:AccountOperation,outcome:AccountOutcome,error:string|null)=>Promise<void>;
 }
@@ -24,12 +24,12 @@ export async function processAccountOperation(operation:AccountOperation,t:Accou
       await t.resetEmail(user.email,new URL('/auth/recovery',appUrl).toString());
     } else if(operation.action==='deactivate') {
       await t.ban(operation.target_id,true);
-      if(!await t.cleanupMedia()){await t.finish(operation,'retry','Call disconnection is still pending.');return;}
+      if(!await t.cleanupMedia(operation)){await t.finish(operation,'retry','Call disconnection is still pending.');return;}
     } else if(operation.action==='reactivate') {
       await t.ban(operation.target_id,false);
     } else if(operation.action==='delete') {
       await t.ban(operation.target_id,true);
-      if(!await t.cleanupMedia()){await t.finish(operation,'retry','Call disconnection is still pending.');return;}
+      if(!await t.cleanupMedia(operation)){await t.finish(operation,'retry','Call disconnection is still pending.');return;}
       if(!await t.validate(operation))return;
       const preparation=await t.prepareDelete(operation);
       if(preparation.targetId!==operation.target_id||!Array.isArray(preparation.avatarPaths))throw new Error('Invalid cleanup preparation');

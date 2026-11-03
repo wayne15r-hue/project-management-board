@@ -65,6 +65,12 @@ it('protects self, owner and admin/former-admin accounts from ordinary admin des
   expect(screen.queryByRole('button',{name:'Delete account'})).toBeNull();
   expect(screen.queryByRole('button',{name:'Grant admin access'})).toBeNull();
 });
+it('lets the owner resume deletion after the initiating admin loses authorization',async()=>{
+ mount({role:'owner',people:[{...person,account:{...person.account,status:'deleting'},latestOperation:{id:'old',actor_id:'revoked-admin',target_id:'worker',action:'delete',status:'failed',payload:{},attempts:1,last_error:'Authorization or target changed',created_at:'2026-11-03T00:00:00Z',updated_at:'2026-11-03T00:00:00Z'}}]});
+ fireEvent.click(await screen.findByRole('button',{name:'Resume deletion'}));
+ await screen.findByRole('region',{name:'Delete account review'});
+ expect(screen.queryByRole('button',{name:'Retry cleanup'})).toBeNull();
+});
 it('requires eligible transfers and the exact Auth email before deleting with preview revision',async()=>{
   const requests=mount();fireEvent.click(await screen.findByRole('button',{name:'Delete account'}));
   const wizard=await screen.findByRole('region',{name:'Delete account review'});

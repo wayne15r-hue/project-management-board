@@ -34,10 +34,15 @@ export async function runAccountMaintenance(deadline=Date.now()+25000):Promise<v
     async ban(id,enabled){const r=await db.auth.admin.updateUserById(id,{ban_duration:enabled?'876000h':'none'});if(r.error)throw r.error;},
     async prepareDelete(op){const r=await db.rpc('account_prepare_delete',{p_id:op.id,p_lease:op.lease_token});if(r.error)throw new Error('Account preparation unavailable');return r.data;},
     async removeAvatar(path){const r=await db.storage.from('avatars').remove([path]);if(r.error)throw r.error;},
-    async cleanupMedia(){
-      const probe=await db.from('audio_media_cleanup').select('id').limit(1);
+    async cleanupMedia(op){
+      const args={p_id:op.id,p_lease:op.lease_token};
+      const probe=await db.rpc('account_media_pending',args);
       if(probe.error)throw new Error('Media cleanup unavailable');
-      return !probe.data?.length||await drainMediaCleanup(undefined,Math.min(deadline,Date.now()+10000));
+      if(probe.data===false)return true;
+      await drainMediaCleanup(undefined,Math.min(deadline,Date.now()+10000));
+      const remaining=await db.rpc('account_media_pending',args);
+      if(remaining.error)throw new Error('Media cleanup unavailable');
+      return remaining.data===false;
     },
     async deleteAuth(id){const r=await db.auth.admin.deleteUser(id,false);if(r.error)throw r.error;},
     async finish(op,outcome,error){const r=await db.rpc('account_finish_operation',{p_id:op.id,p_lease:op.lease_token,p_outcome:outcome,p_error:error});if(r.error)throw new Error('Account acknowledgement unavailable');},

@@ -70,7 +70,8 @@ export function AccountControls({person,viewerId,owner}:{person:AccountPerson;vi
   return <div className="w-full space-y-3">
     <div className="flex flex-wrap gap-2">
       {!unavailable&&<ResetEmailButton key={operation.data?.action==='reset_password'?operation.data.created_at:'no-reset'} requestedAt={operation.data?.action==='reset_password'?operation.data.created_at:null} disabled={busy||pending||inactive} onClick={()=>void request('reset_password',{})}/>}
-      {destructiveAllowed&&!unavailable&&<><Button variant="outline" disabled={busy||pending} onClick={()=>{setConfirm(inactive?'reactivate':'deactivate');setPreview(null);setError('');}}>{inactive?'Reactivate account':'Deactivate account'}</Button><Button variant="outline" disabled={busy||pending} onClick={()=>void loadPreview()}>Delete account</Button></>}
+      {destructiveAllowed&&!unavailable&&<Button variant="outline" disabled={busy||pending} onClick={()=>{setConfirm(inactive?'reactivate':'deactivate');setPreview(null);setError('');}}>{inactive?'Reactivate account':'Deactivate account'}</Button>}
+      {destructiveAllowed&&person.account.status!=='deleted'&&<Button variant="outline" disabled={busy||pending} onClick={()=>void loadPreview()}>{person.account.status==='deleting'?'Resume deletion':'Delete account'}</Button>}
     </div>
     {protectedTarget&&<p className="text-xs text-muted-foreground">Your own account and the Admin Team owner cannot be deactivated or deleted.</p>}
     {!protectedTarget&&!destructiveAllowed&&<p className="text-xs text-muted-foreground">Only the owner can deactivate or delete current or former admins.</p>}

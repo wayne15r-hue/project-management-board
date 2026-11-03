@@ -117,6 +117,18 @@ it('reclaims an unattempted reset after a worker stops before contacting the pro
  await db.query("update account_private.operations set lease_until=now()-interval '1 second' where id=$1",[op(23)]);
  expect((await db.query<{jobs:AccountOperation[]}>('select account_claim_operations() jobs')).rows[0].jobs).toHaveLength(1);
 });
+it('allows the owner to take over a failed deletion with a new reviewed operation',async()=>{
+ await asUser(db,1,'select employee_set_admin($1,true)',[uid(4)]);
+ await deactivate(6,24);
+ const {result:p}=await preview(6);
+ await request(4,6,'delete',25,{expectedRevision:p.revision,confirmationEmail:p.confirmationEmail,transfers:{}});
+ const lease=await claimed(25);
+ await asUser(db,1,'select employee_set_admin($1,false)',[uid(4)]);
+ await db.query('select account_validate_operation($1,$2)',[op(25),lease]);
+ const next=(await preview(6)).result;
+ await request(1,6,'delete',26,{expectedRevision:next.revision,confirmationEmail:next.confirmationEmail,transfers:{}});
+ expect((await asUser(db,1,'select account_operation($1,$2)->>\'actor_id\' actor',[uid(6),op(26)])).rows[0]).toEqual({actor:uid(1)});
+});
 it('revokes Auth sessions and requires cleanup of personal avatars and call media',async()=>{
   await db.exec(`create table auth.sessions(id uuid default gen_random_uuid(),user_id uuid);
     create table auth.refresh_tokens(user_id text);
