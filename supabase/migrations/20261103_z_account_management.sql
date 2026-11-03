@@ -85,7 +85,7 @@ do $$ declare f record; call_args text; invocation text; guard text; body text;
 begin
  for f in select p.*,pg_get_function_arguments(p.oid) args,pg_get_function_result(p.oid) result_type,
   pg_get_functiondef(p.oid) ddl from pg_proc p where p.pronamespace='public'::regnamespace and p.prosecdef
-  and p.prorettype<>'trigger'::regtype and p.proname not like 'account\_%' escape '\' and p.proname<>'delete_conversation' and p.prosrc not like '%begin if (auth.uid() is not null or current_setting(%' and not exists(select from pg_depend dep where dep.classid='pg_proc'::regclass and dep.objid=p.oid and dep.deptype='e') and has_function_privilege('authenticated',p.oid,'execute')
+  and p.prokind='f' and p.prorettype not in ('trigger'::regtype,'event_trigger'::regtype) and p.proname not like 'account\_%' escape '\' and p.proname<>'delete_conversation' and p.prosrc not like '%begin if (auth.uid() is not null or current_setting(%' and not exists(select from pg_depend dep where dep.classid='pg_proc'::regclass and dep.objid=p.oid and dep.deptype='e') and has_function_privilege('authenticated',p.oid,'execute')
  loop
   execute replace(f.ddl,'FUNCTION public.'||quote_ident(f.proname)||'(','FUNCTION account_private.'||quote_ident(f.proname)||'(');
   select coalesce(string_agg('$'||i,',' order by i),'') into call_args from generate_series(1,f.pronargs) i;

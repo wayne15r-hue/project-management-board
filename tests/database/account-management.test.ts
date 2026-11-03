@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import fs from 'node:fs';
 import type { PGlite } from '@electric-sql/pglite';
 import { asUser, board, database, uid } from './fixture';
 import type { AccountOperation, DeletionPreview } from '../../src/types/accounts';
@@ -13,6 +14,11 @@ beforeEach(async () => {
 });
 afterEach(async () => { await db?.close(); });
 const op = (n:number) => '90000000-0000-4000-8000-' + String(n).padStart(12,'0');
+it('preserves provider-owned event-trigger functions during RPC wrapping',async()=>{
+ await db.exec("create function public.qa_rls_auto_enable() returns event_trigger language plpgsql security definer as $$begin return;end$$;");
+ await db.exec(fs.readFileSync('supabase/migrations/20261103_z_account_management.sql','utf8'));
+ expect((await db.query("select prosrc from pg_proc where oid='public.qa_rls_auto_enable()'::regprocedure")).rows[0]).toEqual({prosrc:'begin return;end'});
+});
 const request = (actor:number,target:number,action:string,id:number,payload:object) =>
   asUser(db,actor,'select account_request_action($1,$2,$3,$4) as result',[uid(target),action,op(id),payload]);
 async function claimed(id:number) {
