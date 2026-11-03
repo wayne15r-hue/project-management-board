@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   ClipboardList,
   Ticket,
+  ShieldCheck,
   Settings,
   MoreHorizontal,
   ChevronsUpDown,
@@ -41,6 +42,7 @@ import { ChatNavBadge } from "@/components/chat/chat-nav-badge";
 import type { Board } from "@/types";
 
 interface SidebarProps {
+  isEmployeeAdmin?: boolean;
   boards: Board[];
   userEmail: string;
   userName: string | null;
@@ -75,7 +77,7 @@ function initials(name: string | null, email: string) {
     .join("");
 }
 
-export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarProps) {
+export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployeeAdmin = false }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -205,6 +207,7 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl }: SidebarP
               collapsed={collapsed}
               badge={<ChatNavBadge collapsed={collapsed} />}
             />
+            {isEmployeeAdmin && <SidebarLink href="/dashboard/admin" active={pathname.startsWith('/dashboard/admin')} icon={<ShieldCheck className="h-4 w-4" />} label="Admin" collapsed={collapsed} />}
           </div>
 
           {/* Separator */}

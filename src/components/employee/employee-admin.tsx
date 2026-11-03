@@ -1,0 +1,90 @@
+'use client';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { EmployeeForm } from './employee-form';
+import type { Department, EmployeeDirectory, EmployeeIdentity, EmployeePerson, EmployeeState } from '@/types/employee';
+
+async function read<T>(url:string):Promise<T> {
+  const r=await fetch(url,{cache:'no-store'});const data=await r.json();
+  if(!r.ok)throw new Error(data.error??'Unable to load administration');return data;
+}
+export function EmployeeAdmin() {
+  const cache=useQueryClient();
+  const [tab,setTab]=useState<'people'|'departments'|'admins'>('people');
+  const [query,setQuery]=useState('');const [page,setPage]=useState(1);
+  const [editing,setEditing]=useState<EmployeePerson|null>(null);
+  const [error,setError]=useState('');const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);
+  const state=useQuery({queryKey:['employee-admin','state'],queryFn:()=>read<EmployeeState>('/api/employee/setup')});
+  const directory=useQuery({queryKey:['employee-admin','directory',query,page],queryFn:()=>read<EmployeeDirectory>(`/api/admin/employees?q=${encodeURIComponent(query)}&page=${page}`)});
+  const members=useQuery({queryKey:['employee-admin','members'],queryFn:()=>read<(EmployeeIdentity&{role:'owner'|'admin'})[]>('/api/admin/members')});
+  async function mutate(url:string,method:string,value:unknown) {
+    const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
+    const data=await r.json();if(!r.ok)throw new Error(data.error??'Could not save changes');
+    await cache.invalidateQueries({queryKey:['employee-admin']});
+    setMessage('Changes saved.');
+  }
+  async function changeAdmin(userId:string,enabled:boolean) {
+    setBusy(true);setError('');setMessage('');
+    try{await mutate('/api/admin/members','POST',{userId,enabled});}
+    catch(e){setError(e instanceof Error?e.message:'Could not update admin access');}
+    finally{setBusy(false);}
+  }
+  if(state.isPending)return <p className="p-6">Loading administration…</p>;
+  if(state.error)return <p role="alert" className="p-6">{state.error.message}</p>;
+  if(!state.data?.role)return <p role="alert" className="p-6">Admin access is required. Contact the Admin Team owner.</p>;
+  const owner=state.data.role==='owner';
+  return <div className="mx-auto w-full max-w-5xl space-y-6 px-5 py-10 md:px-10">
+    <div><h1 className="text-2xl font-semibold">Admin</h1><p className="mt-1 text-sm text-muted-foreground">Manage employee details, departments, and the Admin Team.</p></div>
+    <div className="flex flex-wrap gap-2" aria-label="Administration sections">
+      {(['people','departments','admins'] as const).map(value=><Button key={value} variant={tab===value?'default':'outline'} aria-pressed={tab===value} onClick={()=>{setTab(value);setEditing(null);setMessage('');setError('');}}>{value==='people'?'People':value==='departments'?'Departments':'Admin Team'}</Button>)}
+    </div>
+    {message&&<p role="status" className="text-sm">{message}</p>}
+    {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+    {tab==='departments'?<div className="space-y-4">
+      <DepartmentEditor key="new" onSave={async name=>{await mutate('/api/admin/departments','POST',{id:null,name,archived:false});}}/>
+      {state.data.departments.map(d=><DepartmentEditor key={d.id+':'+d.name+':'+d.archived} department={d} onSave={async(name,archived)=>{await mutate('/api/admin/departments','POST',{id:d.id,name,archived:archived??d.archived});}}/>)}
+    </div>:tab==='admins'?<div className="space-y-5">
+      <p className="text-sm text-muted-foreground">{owner?'You own the Admin Team. Use People to grant admin access to an existing user.':'The owner grants and revokes admin access. Admins can manage employee details and departments.'}</p>
+      {members.error&&<p role="alert">{members.error.message}</p>}
+      {members.data?.map(m=><div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+        <div className="min-w-0 break-words"><p className="font-medium">{m.full_name??m.email}</p><p className="text-sm text-muted-foreground break-all">{m.email} · {m.role==='owner'?'Owner':'Admin'}</p></div>
+        {owner&&m.role!=='owner'&&<Button variant="outline" disabled={busy} onClick={()=>void changeAdmin(m.id,false)}>Remove admin access</Button>}
+      </div>)}
+    </div>:<>
+      <div className="space-y-2"><Label htmlFor="employee-user-search">Search people</Label><Input id="employee-user-search" placeholder="Name or email" maxLength={100} value={query} onChange={e=>{setQuery(e.target.value);setPage(1);setEditing(null);}}/></div>
+      {directory.isPending&&<p>Loading people…</p>}
+      {directory.error&&<p role="alert">{directory.error.message}</p>}
+      {editing?<section className="space-y-5 rounded-lg border p-5">
+        <div className="flex flex-wrap justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold">Edit employee details</h2><p className="text-sm break-all">{editing.full_name??editing.email} · {editing.email}</p></div><Button variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button></div>
+        <EmployeeForm key={editing.id} userId={editing.id} departments={state.data.departments} manager={editing.manager}
+          initial={editing.record?{departmentId:editing.record.department_id,jobTitle:editing.record.job_title,managerId:editing.record.manager_id}:undefined}
+          onSave={async value=>{await mutate('/api/admin/employees','PATCH',{userId:editing.id,...value});setEditing(null);}}/>
+      </section>:<div className="space-y-3">
+        {directory.data?.items.map(person=><div key={person.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
+          <div className="min-w-0 flex-1 basis-52"><p className="font-medium break-words">{person.full_name??person.email}{person.adminRole&&<span className="ml-2 text-xs text-muted-foreground">{person.adminRole==='owner'?'Owner':'Admin'}</span>}</p><p className="text-sm text-muted-foreground break-all">{person.email}</p>
+            {person.record?<div className="mt-2 space-y-1 text-sm break-words"><p>{person.department} · {person.record.job_title}</p><p className="text-muted-foreground">Reports to: {person.manager?.full_name??person.manager?.email??'No reporting manager'}</p></div>:<p className="mt-2 text-sm text-muted-foreground">Setup incomplete</p>}
+          </div>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!person.record} onClick={()=>{setEditing(person);setMessage('');}}>Edit details</Button>
+            {owner&&person.adminRole!=='owner'&&<Button variant="outline" disabled={busy} onClick={()=>void changeAdmin(person.id,!person.adminRole)}>{person.adminRole?'Remove admin access':'Grant admin access'}</Button>}
+          </div>
+        </div>)}
+        {directory.data?.items.length===0&&<p className="text-sm text-muted-foreground">No people found.</p>}
+      </div>}
+      <div className="flex flex-wrap items-center gap-3 text-sm"><Button variant="outline" disabled={page===1||directory.isFetching} onClick={()=>setPage(p=>p-1)}>Previous</Button><span>Page {page} · {directory.data?.total??0} people</span><Button variant="outline" disabled={!directory.data||page*25>=directory.data.total||directory.isFetching} onClick={()=>setPage(p=>p+1)}>Next</Button></div>
+    </>}
+  </div>;
+}
+function DepartmentEditor({department,onSave}:{department?:Department;onSave:(name:string,archived?:boolean)=>Promise<void>}) {
+  const [name,setName]=useState(department?.name??'');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+  async function save(archived?:boolean){setBusy(true);setError('');try{await onSave(name.trim(),archived);if(!department)setName('');}catch(e){setError(e instanceof Error?e.message:'Could not save department');}finally{setBusy(false);}}
+  const id='department-'+(department?.id??'new');
+  return <form className="space-y-2 rounded-lg border p-4" onSubmit={e=>{e.preventDefault();void save();}}>
+    <Label htmlFor={id}>{department?'Department name':'Add a department'}{department?.archived?' (archived)':''}</Label>
+    <div className="flex flex-wrap gap-2"><Input className="min-w-0 flex-1 basis-48" id={id} required maxLength={100} value={name} disabled={busy} onChange={e=>setName(e.target.value)}/><Button disabled={busy||!name.trim()} type="submit">{department?'Save name':'Add department'}</Button>
+      {department&&<Button type="button" variant="outline" disabled={busy||!name.trim()} onClick={()=>void save(!department.archived)}>{department.archived?'Restore':'Archive'}</Button>}
+    </div>{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+  </form>;
+}
