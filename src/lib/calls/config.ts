@@ -7,6 +7,6 @@ export function callConfiguration() {
   const parsed=new URL(url);
   // Revocation is a Cloud feature; do not silently weaken it on other servers.
   if(parsed.protocol!=='wss:'||!parsed.hostname.endsWith('.livekit.cloud')||parsed.username||parsed.password||parsed.search)return null;
-  return {url,key,secret,httpUrl:url.replace(/^wss:/,'https:'),enabled:process.env.AUDIO_CALLS_ENABLED==='true',groupEnabled:process.env.GROUP_AUDIO_ENABLED==='true'};
+  return {url,key,secret,httpUrl:url.replace(/^wss:/,'https:'),enabled:process.env.AUDIO_CALLS_ENABLED==='true',groupEnabled:process.env.GROUP_AUDIO_ENABLED==='true',videoEnabled:process.env.VIDEO_CALLS_ENABLED==='true',screenShareEnabled:process.env.SCREEN_SHARING_ENABLED==='true'};
  } catch{return null;}
 }

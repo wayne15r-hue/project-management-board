@@ -13,6 +13,35 @@ beforeEach(()=>{
  vi.stubEnv('LIVEKIT_URL','wss://qa.livekit.cloud');vi.stubEnv('LIVEKIT_API_KEY','API-test-only');vi.stubEnv('LIVEKIT_API_SECRET','synthetic-secret-for-audio-tests-12345');
  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','synthetic-service-role');
  vi.stubEnv('AUDIO_CALLS_ENABLED','true');
+ vi.stubEnv('VIDEO_CALLS_ENABLED','false');vi.stubEnv('SCREEN_SHARING_ENABLED','false');
+});
+it('validates video mode, gates it, and defaults old clients to audio',async()=>{
+ state.rpc.mockResolvedValue({data:{id,state:'ringing'},error:null});
+ expect((await POST(req({conversationId:id,mode:'video'}))).status).toBe(503);
+ expect(state.rpc).not.toHaveBeenCalled();
+ vi.stubEnv('VIDEO_CALLS_ENABLED','true');
+ expect((await POST(req({conversationId:id,mode:'video'}))).status).toBe(200);
+ expect(state.rpc).toHaveBeenLastCalledWith('audio_call_start',expect.objectContaining({p_initial_mode:'video'}));
+ await POST(req({conversationId:id}));
+ expect(state.rpc).toHaveBeenLastCalledWith('audio_call_start',expect.objectContaining({p_initial_mode:'audio'}));
+ expect((await POST(req({conversationId:id,mode:'record'}))).status).toBe(400);
+});
+it('constrains signed publication sources to server capability flags',async()=>{
+ state.rpc.mockResolvedValue({data:{room,identity:state.user},error:null});
+ for(const [video,share,want] of [[true,false,['microphone','camera']],[false,true,['microphone','screen_share','screen_share_audio']],[true,true,['microphone','camera','screen_share','screen_share_audio']]] as const){
+  vi.stubEnv('VIDEO_CALLS_ENABLED',String(video));vi.stubEnv('SCREEN_SHARING_ENABLED',String(share));
+  const result=await (await TOKEN(req({video:true,share:true}),{params:Promise.resolve({callId:id})})).json();
+  const {payload}=await jwtVerify(result.token,new TextEncoder().encode('synthetic-secret-for-audio-tests-12345'));
+  expect(payload.video).toMatchObject({canPublishSources:want,canPublishData:false});
+  expect(result.capabilities).toEqual({video,screenShare:share});
+ }
+});
+it('advertises no video or sharing readiness when the base call feature is off',async()=>{
+ state.rpc.mockResolvedValue({data:[],error:null});
+ vi.stubEnv('VIDEO_CALLS_ENABLED','true');vi.stubEnv('SCREEN_SHARING_ENABLED','true');
+ expect(await (await GET(new Request('https://app.test/api/calls'))).json()).toMatchObject({videoReady:true,screenShareReady:true});
+ vi.stubEnv('AUDIO_CALLS_ENABLED','false');
+ expect(await (await GET(new Request('https://app.test/api/calls'))).json()).toMatchObject({videoReady:false,screenShareReady:false});
 });
 it('requires authentication and validates all identifiers and commands before database writes',async()=>{
  state.user='';expect((await POST(req({conversationId:id}))).status).toBe(401);

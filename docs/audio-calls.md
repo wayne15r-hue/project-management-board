@@ -1,6 +1,6 @@
 # Audio calling
 
-Direct and group audio use Supabase for membership, call state and history, and LiveKit Cloud for microphone audio. No recording, transcription, camera, screen sharing or data publication is enabled.
+Direct and group audio use Supabase for membership, call state and history, and LiveKit Cloud for microphone audio. Optional camera and screen capabilities are described in [Video calls and screen sharing](video-screen-sharing.md) and default off. Recording, transcription and data publication remain disabled.
 
 ## Deployment sequence
 

@@ -10,6 +10,17 @@ async function create(kind='direct'){return (await asUser(db,1,'select create_co
 async function start(id:string,actor=1){return ((await asUser(db,actor,'select audio_call_start($1) c',[id])).rows[0] as {c:Call}).c;}
 async function act(id:string,action:string,actor=1,target:string|null=null){return ((await asUser(db,actor,'select audio_call_action($1,$2,$3) c',[id,action,target])).rows[0] as {c:Call}).c;}
 async function finish(id:string){await act(id,'end');}
+it('defaults existing callers to audio and preserves the original mode when joining an existing room',async()=>{
+ const {id}=await create();const legacy=await start(id);
+ expect(legacy).toMatchObject({initialMode:'audio'});await finish(legacy.id);
+ const video=((await asUser(db,1,"select audio_call_start($1,true,'video') c",[id])).rows[0] as {c:Call}).c;
+ expect(video).toMatchObject({initialMode:'video'});
+ expect((await start(id)).id).toBe(video.id);
+ expect(await start(id)).toMatchObject({initialMode:'video'});
+ await expect(asUser(db,3,"select audio_call_start($1,true,'video')",[id])).rejects.toThrow(/member|Forbidden/i);
+ await expect(asUser(db,1,"select audio_call_start($1,true,'invalid')",[id])).rejects.toThrow(/mode/i);
+ await finish(video.id);
+});
 it('denies outsider start, reads, mutation and room tokens and forbids direct table writes',async()=>{
  const {id}=await create();
  await expect(start(id,3)).rejects.toThrow(/member|Forbidden/i);

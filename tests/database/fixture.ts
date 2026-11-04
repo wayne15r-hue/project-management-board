@@ -32,11 +32,12 @@ grant all on all tables in schema storage to authenticated,anon,service_role;
 alter default privileges in schema public,storage grant all on tables to authenticated,anon,service_role;
 create publication supabase_realtime;
 `;
-export async function database({policyOnly = false, seed = true, legacy = false} = {}) {
+export async function database({policyOnly = false, seed = true, legacy = false, beforeMigration = ''} = {}) {
   const db = new PGlite();
   await db.exec(setup);
   if (legacy) await db.exec("set check_function_bodies=off");
   for (const name of fs.readdirSync(path.resolve("supabase/migrations")).sort()) {
+    if (beforeMigration && name >= beforeMigration) continue;
     if (legacy && name.startsWith("202611")) continue;
     let sql = fs.readFileSync(path.resolve("supabase/migrations",name),"utf8");
     if (policyOnly) sql = sql.replace(/alter publication supabase_realtime add table [^;]+;/g, "");
