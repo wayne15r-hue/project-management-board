@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { RingtoneSettings } from "./ringtone-settings";
 import { cn } from "@/lib/utils";
 
 interface UsageRow {
@@ -56,13 +57,12 @@ export function SettingsForm({
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
 
-  const [name, setName] = useState(initialName);
+  const name = initialName;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [emailNotifications, setEmailNotifications] = useState(
     initialEmailNotifications
   );
   const [savingNotif, setSavingNotif] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,24 +89,6 @@ export function SettingsForm({
   // usage prop is month-to-date, so we can't accurately split by day on the
   // client without extra data. We just show monthly total and the daily cap.
   const callsThisMonth = usageTotals.calls;
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: name.trim() || null })
-        .eq("id", userId);
-      if (error) throw error;
-      toast.success("Profile updated");
-      router.refresh();
-    } catch {
-      toast.error("Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -180,7 +162,7 @@ export function SettingsForm({
         <h2 className="mb-4 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
           Profile
         </h2>
-        <form onSubmit={handleSave} className="space-y-5">
+        <div className="space-y-5">
           <div
             className={cn(
               "flex flex-col items-start gap-4 rounded-xl border border-dashed border-border p-4 sm:flex-row sm:items-center",
@@ -200,7 +182,7 @@ export function SettingsForm({
           >
             <div className="relative">
               <div
-                className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#7CAFC4] text-lg font-semibold text-white"
+                className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-accent text-lg font-semibold text-accent-foreground"
                 style={
                   avatarUrl
                     ? {
@@ -266,7 +248,8 @@ export function SettingsForm({
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              readOnly
+              aria-describedby="name-managed"
               placeholder="Your name"
             />
           </div>
@@ -274,13 +257,11 @@ export function SettingsForm({
             <Label htmlFor="email">Email</Label>
             <Input id="email" value={email} disabled />
           </div>
-          <div className="pt-1">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
-        </form>
+          <p id="name-managed" className="text-sm text-muted-foreground">Your name is managed by an administrator. Contact them if it needs correcting.</p>
+        </div>
       </section>
+
+      <RingtoneSettings key={userId} userId={userId}/>
 
       {/* AI Assistant */}
       <section>

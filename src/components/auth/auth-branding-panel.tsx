@@ -2,27 +2,20 @@ import { BrandLogo } from "@/components/shared/brand-logo";
 
 export function AuthBrandingPanel() {
   return (
-    <aside className="relative hidden flex-col justify-between overflow-hidden bg-muted p-10 text-foreground md:flex md:w-[60%] md:flex-1 lg:p-14">
-      <BrandLogo className="text-xl font-semibold" />
+    <aside className="solar-auth-story relative hidden flex-col justify-between overflow-hidden p-10 text-foreground md:flex md:w-[55%] md:flex-1 lg:p-14">
+      <BrandLogo className="text-2xl font-semibold text-primary" />
       <div className="max-w-lg py-16">
         <p className="mb-5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Projects · People · Daily operations
+          A shared direction
         </p>
         <h1 className="text-[42px] font-semibold leading-[1.1] tracking-tight lg:text-[48px]">
-          Bring your team’s work into focus.
+          Good work.<br />Brighter together.
         </h1>
         <p className="mt-6 text-base leading-7 text-muted-foreground">
-          A connected place to plan work, make decisions and keep your team
-          moving.
+          Plan the day, connect your team, and keep the work that matters moving.
         </p>
       </div>
-      <div className="max-w-md rounded-2xl border border-border bg-background p-6">
-        <p className="font-medium">A shared direction for the day ahead.</p>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          From project boards and approvals to requests, availability and
-          conversations, keep the everyday work in context.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">Projects · People · Daily operations</p>
     </aside>
   );
 }

@@ -386,6 +386,7 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
         <div className="flex items-center gap-1.5">
           <div className="relative">
             <select
+              aria-label="Sort boards"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 appearance-none rounded-md border border-border bg-card pl-8 pr-7 text-[12.5px] font-medium text-foreground outline-none transition-colors hover:bg-accent"

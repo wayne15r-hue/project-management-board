@@ -16,7 +16,7 @@ export async function employeeRead(name:string,args:Record<string,unknown>={}) {
   const {data,error}=await client.rpc(name,args);
   return error?employeeError(error):NextResponse.json(data,{headers:{'Cache-Control':'private, no-store'}});
 }
-export async function employeeMutation<T>(request:Request,schema:z.ZodType<T>,name:string,args:(input:T)=>Record<string,unknown>,expectedUserId?:(input:T)=>string) {
+export async function employeeMutation<T>(request:Request,schema:z.ZodType<T>,name:string,args:(input:T)=>Record<string,unknown>,expectedUserId?:(input:T)=>string|undefined) {
   const client=await createClient();
   const {data:{user}}=await client.auth.getUser();
   if(!user) return NextResponse.json({error:'Unauthorized'},{status:401});
@@ -24,7 +24,8 @@ export async function employeeMutation<T>(request:Request,schema:z.ZodType<T>,na
   try {body=await request.json();} catch {return NextResponse.json({error:'Invalid JSON'},{status:400});}
   const parsed=schema.safeParse(body);
   if(!parsed.success) return NextResponse.json({error:'Check the required fields and try again.'},{status:400});
-  if(expectedUserId&&expectedUserId(parsed.data)!==user.id) return NextResponse.json({error:'Your account has changed. Reload this page before submitting.',code:'ACCOUNT_CHANGED'},{status:409});
+  const expected=expectedUserId?.(parsed.data);
+  if(expected&&expected!==user.id) return NextResponse.json({error:'Your account has changed. Reload this page before submitting.',code:'ACCOUNT_CHANGED'},{status:409});
   const {data,error}=await client.rpc(name,args(parsed.data));
   return error?employeeError(error):NextResponse.json(data??{ok:true},{headers:{'Cache-Control':'private, no-store'}});
 }

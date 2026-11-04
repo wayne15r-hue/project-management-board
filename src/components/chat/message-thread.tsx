@@ -12,7 +12,6 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import {
   ArrowLeft,
-  Trash2,
   Smile,
   Download,
   FileIcon,
@@ -667,11 +666,11 @@ function MessageThreadContent({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <header className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-3">
         <button
           type="button"
           onClick={onBack}
-          className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+          className="md:hidden flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
           aria-label="Back"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -683,32 +682,15 @@ function MessageThreadContent({
         />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[14px] font-semibold">{title}</h2>
-          {conversation.type === 'group' ? <button type="button" aria-label="Group details" onClick={() => setGroupOpen(true)} className="text-[11px] text-muted-foreground hover:underline">{conversation.members.length} members · Group details</button> :
+          {conversation.type === 'group' ? <p className="text-xs text-muted-foreground">{conversation.members.length} members</p> :
           <p className="truncate text-[11px] text-muted-foreground">
             {conversation.members.length}{" "}
             {conversation.members.length === 1 ? "member" : "members"}
           </p>}
         </div>
-        <CallControls key={conversation.id} conversation={conversation}/>
-        {conversation.current_user_is_admin && (
-          <button
-            type="button"
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Delete this conversation? This removes all messages for everyone."
-                )
-              ) {
-                onDelete(conversation.id);
-              }
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            aria-label="Delete conversation"
-            title="Delete conversation"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
+        <CallControls key={conversation.id} conversation={conversation}
+          onDetails={conversation.type==='group'?()=>setGroupOpen(true):undefined}
+          onDelete={conversation.current_user_is_admin?()=>{if(window.confirm('Delete this conversation? This removes all messages for everyone.'))void onDelete(conversation.id);}:undefined}/>
       </header>
       {conversation.type === 'group' && (
         <GroupDetailsDialog

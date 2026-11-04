@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
+vi.mock('next/navigation',()=>({useRouter:()=>({refresh:()=>{}})}));
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EmployeeAdmin } from '@/components/employee/employee-admin';
@@ -7,6 +8,13 @@ import type { AccountOperation, AccountPerson, DeletionPreview } from '@/types/a
 
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 const person:AccountPerson={id:'worker',full_name:'Worker',email:'worker@example.com',record:null,department:null,manager:null,adminRole:null,account:{status:'active',createdAt:'2026-01-01T00:00:00Z',lastSignInAt:null,emailVerified:true,revision:7,formerAdmin:false},directory:{employeeId:null,workLocation:null,joiningDate:null,employmentType:null}};
+it('corrects structured employee names through the protected endpoint without splitting an existing display name',async()=>{
+ const requests=mount();fireEvent.click(await screen.findByRole('button',{name:'Correct name'}));
+ expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('');
+ fireEvent.change(screen.getByLabelText('First name'),{target:{value:'ओंकार'}});
+ fireEvent.click(screen.getByRole('button',{name:'Save corrected name'}));await screen.findByText('Changes saved.');
+ expect(requests.some(r=>r.url==='/api/admin/employees/worker/name'&&r.method==='PATCH'&&JSON.stringify(r.body)==='{"firstName":"ओंकार","lastName":""}')).toBe(true);
+});
 const preview:DeletionPreview={userId:'worker',revision:8,status:'active',counts:{sharedBoards:1},requirements:[{key:'board:1',kind:'board',label:'Shared board ownership',count:1,candidates:[{id:'successor',full_name:'Successor',email:'successor@example.com'}],allowNone:false,blockedReason:null}],blockers:[],confirmationEmail:'auth-email@example.com'};
 function mount({people=[person],role='admin',deletion=preview}:{people?:AccountPerson[];role?:'admin'|'owner';deletion?:DeletionPreview}={}) {
   const requests:{url:string;method:string;body:unknown}[]=[];

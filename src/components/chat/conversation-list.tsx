@@ -69,7 +69,7 @@ export function ConversationList({
           type="button"
           onClick={onNew}
           aria-label="New conversation"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -79,8 +79,9 @@ export function ConversationList({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search"
-          className="h-8 pl-7 text-[13px]"
+          aria-label="Search conversations"
+          placeholder="Find a conversation"
+          className="h-11 pl-7 text-sm"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -125,7 +126,7 @@ export function ConversationList({
                     type="button"
                     onClick={() => onSelect(c.id)}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left transition-colors",
                       isActive
                         ? "bg-accent text-accent-foreground"
                         : "hover:bg-accent/60"

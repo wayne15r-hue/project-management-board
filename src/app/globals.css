@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter, ui-sans-serif), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,73 +49,82 @@
 }
 
 :root {
-  /* Notion-style warm gray palette */
-  --background: #FBFBFA;
-  --foreground: #37352F;
-  --card: #FFFFFF;
-  --card-foreground: #37352F;
-  --popover: #FFFFFF;
-  --popover-foreground: #37352F;
-  --primary: #37352F;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F1F1EF;
-  --secondary-foreground: #37352F;
-  --muted: #F7F6F3;
-  --muted-foreground: #787774;
-  --accent: #F1F1EF;
-  --accent-foreground: #37352F;
-  --destructive: #E03E3E;
-  --border: #E3E2DE;
-  --input: #E3E2DE;
-  --ring: #B8B7B3;
+  /* Cosmic Solar: ivory surfaces and warm amber, shared by application UI. */
+  --background: #F7F3EB;
+  --foreground: #252B36;
+  --card: #FFFEFA;
+  --card-foreground: #252B36;
+  --popover: #FFFEFA;
+  --popover-foreground: #252B36;
+  --primary: #9A5704;
+  --primary-foreground: #FFFAF0;
+  --secondary: #F0EBE2;
+  --secondary-foreground: #252B36;
+  --muted: #F0EBE2;
+  --muted-foreground: #596171;
+  --accent: #F8E7CB;
+  --accent-foreground: #734000;
+  --destructive: #A42E24;
+  --border: #D4CBBB;
+  --input: #D4CBBB;
+  --ring: #9A5704;
   --chart-1: #E3E2DE;
   --chart-2: #B8B7B3;
   --chart-3: #787774;
   --chart-4: #55544F;
   --chart-5: #37352F;
   --radius: 0.5rem;
-  --sidebar: #F7F6F3;
-  --sidebar-foreground: #37352F;
-  --sidebar-primary: #37352F;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EBEAE6;
-  --sidebar-accent-foreground: #37352F;
-  --sidebar-border: #E3E2DE;
-  --sidebar-ring: #B8B7B3;
+  --sidebar: #F0EBE2;
+  --sidebar-foreground: #252B36;
+  --sidebar-primary: #9A5704;
+  --sidebar-primary-foreground: #FFFAF0;
+  --sidebar-accent: #F8E7CB;
+  --sidebar-accent-foreground: #734000;
+  --sidebar-border: #D4CBBB;
+  --sidebar-ring: #9A5704;
 }
 
 .dark {
-  --background: #191918;
-  --foreground: #E8E7E3;
-  --card: #252523;
-  --card-foreground: #E8E7E3;
-  --popover: #252523;
-  --popover-foreground: #E8E7E3;
-  --primary: #E8E7E3;
-  --primary-foreground: #191918;
-  --secondary: #2F2F2D;
-  --secondary-foreground: #E8E7E3;
-  --muted: #2F2F2D;
-  --muted-foreground: #9B9A95;
-  --accent: #2F2F2D;
-  --accent-foreground: #E8E7E3;
-  --destructive: #E03E3E;
-  --border: #373634;
-  --input: #373634;
-  --ring: #55544F;
+  --background: #0B1423;
+  --foreground: #FFF4E0;
+  --card: #111E31;
+  --card-foreground: #FFF4E0;
+  --popover: #111E31;
+  --popover-foreground: #FFF4E0;
+  --primary: #FFC56E;
+  --primary-foreground: #291A06;
+  --secondary: #19283D;
+  --secondary-foreground: #FFF4E0;
+  --muted: #19283D;
+  --muted-foreground: #B6C1CF;
+  --accent: #302A23;
+  --accent-foreground: #FFC56E;
+  --destructive: #FFB6AA;
+  --border: #304259;
+  --input: #304259;
+  --ring: #FFC56E;
   --chart-1: #373634;
   --chart-2: #55544F;
   --chart-3: #787774;
   --chart-4: #9B9A95;
   --chart-5: #E8E7E3;
-  --sidebar: #1F1F1E;
-  --sidebar-foreground: #E8E7E3;
-  --sidebar-primary: #E8E7E3;
-  --sidebar-primary-foreground: #191918;
-  --sidebar-accent: #2F2F2D;
-  --sidebar-accent-foreground: #E8E7E3;
-  --sidebar-border: #373634;
-  --sidebar-ring: #55544F;
+  --sidebar: #111E31;
+  --sidebar-foreground: #FFF4E0;
+  --sidebar-primary: #FFC56E;
+  --sidebar-primary-foreground: #291A06;
+  --sidebar-accent: #302A23;
+  --sidebar-accent-foreground: #FFC56E;
+  --sidebar-border: #304259;
+  --sidebar-ring: #FFC56E;
+}
+
+.solar-auth-story { background: radial-gradient(ellipse at 15% 75%,var(--accent),transparent 70%),var(--card); }
+@media (pointer:coarse) {
+  [data-slot="button"], [data-slot="dropdown-menu-item"] { min-height:44px; }
+  [data-slot="button"][data-size^="icon"] { min-width:44px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
 }
 
 @layer base {
@@ -123,7 +132,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: var(--font-inter, ui-sans-serif), system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;

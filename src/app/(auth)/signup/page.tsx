@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FloatingInput } from "@/components/auth/floating-input";
 import { Loader2 } from "lucide-react";
+import { nameSchema, displayName } from "@/lib/profile/name";
 import { cn } from "@/lib/utils";
 
 function passwordStrength(pw: string): {
@@ -26,7 +27,8 @@ function passwordStrength(pw: string): {
 }
 
 export default function SignupPage() {
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -57,11 +59,13 @@ export default function SignupPage() {
       return;
     }
 
+    const name = nameSchema.safeParse({firstName,lastName});
+    if(!name.success){setError('Enter a first name and optional surname, up to 100 characters each.');return;}
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: `${window.location.origin}/callback?next=%2Fdashboard` },
+      options: { data: { first_name:name.data.firstName, last_name:name.data.lastName||null, full_name:displayName(name.data) }, emailRedirectTo: `${window.location.origin}/callback?next=%2Fdashboard` },
     });
 
     if (error) {
@@ -100,13 +104,15 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <FloatingInput
-          label="Full name"
+          label="First name"
           type="text"
-          autoComplete="name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          autoComplete="given-name"
+          value={firstName}
+          maxLength={100}
+          onChange={(e) => setFirstName(e.target.value)}
           required
         />
+        <FloatingInput label="Last name (optional)" type="text" autoComplete="family-name" value={lastName} maxLength={100} onChange={e=>setLastName(e.target.value)}/>
         <FloatingInput
           label="Email"
           type="email"
@@ -181,7 +187,7 @@ export default function SignupPage() {
         <Button
           type="submit"
           className={cn(
-            "h-11 w-full bg-foreground text-background transition-transform hover:bg-foreground/90 active:scale-[0.98]"
+            "h-11 w-full"
           )}
           disabled={loading}
         >
