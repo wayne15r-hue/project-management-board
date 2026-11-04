@@ -7,6 +7,7 @@ export interface AudioCallParticipant {
  display_name:string;
 }
 export interface AudioCall {
+ initialMode?:'audio'|'video';
  id:string;
  conversation_id:string;
  caller_id:string;

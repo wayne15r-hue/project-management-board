@@ -17,10 +17,13 @@ export async function POST(_request:Request,{params}:{params:Promise<{callId:str
  if(access.kind==='group'&&!config.groupEnabled)return NextResponse.json({error:'Group audio is not enabled yet.'},{status:503,headers});
  if(!await drainMediaCleanup(access.room))return NextResponse.json({error:'Finishing previous call access changes. Retry shortly.'},{status:503,headers});
  const token=new AccessToken(config.key,config.secret,{identity:access.identity,ttl:120});
- token.addGrant({room:access.room,roomJoin:true,canPublish:true,canPublishSources:[TrackSource.MICROPHONE],canSubscribe:true,canPublishData:false,canUpdateOwnMetadata:false});
+ const sources=[TrackSource.MICROPHONE];
+ if(config.videoEnabled)sources.push(TrackSource.CAMERA);
+ if(config.screenShareEnabled)sources.push(TrackSource.SCREEN_SHARE,TrackSource.SCREEN_SHARE_AUDIO);
+ token.addGrant({room:access.room,roomJoin:true,canPublish:true,canPublishSources:sources,canSubscribe:true,canPublishData:false,canUpdateOwnMetadata:false});
  const jwt=await token.toJwt();
  // Signing is local, but removal/leave can race either authorization query.
  const checked=await client.rpc('audio_call_access',{p_call_id:callId});
  if(checked.error||checked.data?.identity!==access.identity||checked.data?.room!==access.room)return NextResponse.json({error:'Call access changed. Please rejoin.'},{status:403,headers});
- return NextResponse.json({token:jwt,url:config.url},{headers});
+ return NextResponse.json({token:jwt,url:config.url,capabilities:{video:config.videoEnabled,screenShare:config.screenShareEnabled}},{headers});
 }

@@ -4,7 +4,7 @@ import {createClient} from '@/lib/supabase/server';
 import {callConfiguration} from '@/lib/calls/config';
 import {drainMediaCleanup} from '@/lib/calls/cleanup';
 
-const start=z.object({conversationId:z.uuid()}).strict();
+const start=z.object({conversationId:z.uuid(),mode:z.enum(['audio','video']).default('audio')}).strict();
 const mutation=z.discriminatedUnion('action',[
  z.object({callId:z.uuid(),action:z.enum(['join','decline','cancel','leave','end','heartbeat'])}).strict(),
  z.object({callId:z.uuid(),action:z.literal('kick'),targetId:z.uuid()}).strict(),
@@ -19,15 +19,17 @@ export async function GET(request:Request){
  if(error)return NextResponse.json({error:'Could not load calls.'},{status:status(error.code)});
  const configured=callConfiguration();const ready=!!configured?.enabled;
  const cleaned=configured?await drainMediaCleanup():true;
- return NextResponse.json({calls:data,ready,groupReady:ready&&!!configured?.groupEnabled,mediaCleanupPending:!cleaned},{headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({calls:data,ready,groupReady:ready&&!!configured?.groupEnabled,videoReady:ready&&!!configured?.videoEnabled,screenShareReady:ready&&!!configured?.screenShareEnabled,mediaCleanupPending:!cleaned},{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:Request){
  const client=await createClient();const {data:{user}}=await client.auth.getUser();
  if(!user)return NextResponse.json({error:'Unauthorized'},{status:401});
  const body=start.safeParse(await request.json().catch(()=>null));
  if(!body.success)return NextResponse.json({error:'Invalid conversation ID'},{status:400});
- if(!callConfiguration()?.enabled)return NextResponse.json({error:'Audio calling is not enabled yet.'},{status:503});
- const {data,error}=await client.rpc('audio_call_start',{p_conversation_id:body.data.conversationId,p_allow_group:!!callConfiguration()?.groupEnabled});
+ const config=callConfiguration();
+ if(!config?.enabled)return NextResponse.json({error:'Audio calling is not enabled yet.'},{status:503});
+ if(body.data.mode==='video'&&!config.videoEnabled)return NextResponse.json({error:'Video calling is not enabled yet.'},{status:503});
+ const {data,error}=await client.rpc('audio_call_start',{p_conversation_id:body.data.conversationId,p_allow_group:config.groupEnabled,p_initial_mode:body.data.mode});
  if(error)return NextResponse.json({error:error.message},{status:status(error.code)});
  return NextResponse.json({call:data,mediaCleanupPending:!await drainMediaCleanup()},{headers:{'Cache-Control':'no-store'}});
 }
