@@ -1,6 +1,9 @@
+import { Space_Grotesk } from "next/font/google";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LandingPage } from "@/components/landing/landing-page";
+
+const marketingFont = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
 
 export const dynamic = "force-dynamic";
 
@@ -14,5 +17,5 @@ export default async function Home() {
     redirect("/dashboard");
   }
 
-  return <LandingPage />;
+  return <div className={marketingFont.variable}><LandingPage /></div>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/shared/brand-logo";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +16,6 @@ import {
   ArrowLeft,
   Loader2,
   Sparkles,
-  LayoutDashboard,
 } from "lucide-react";
 import { BOARD_TEMPLATES, type BoardTemplate } from "@/lib/board-templates";
 import { cn } from "@/lib/utils";
@@ -153,10 +154,10 @@ export function OnboardingWizard({ userName, boardCount, userId }: OnboardingWiz
         {step === 0 && (
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg">
-              <LayoutDashboard className="h-7 w-7" />
+              <BrandMark className="h-9 w-9" />
             </div>
             <h2 className="text-[24px] font-bold text-foreground">
-              Welcome to ProjectBoard{userName ? `, ${userName.split(" ")[0]}` : ""}!
+              Welcome to {BRAND.name}{userName ? `, ${userName.split(" ")[0]}` : ""}!
             </h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
               Let&apos;s set up your workspace in 30 seconds.

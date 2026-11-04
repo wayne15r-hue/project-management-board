@@ -20,7 +20,8 @@ export async function updateSession(request: NextRequest) {
   );
   const { data: { user } } = await supabase.auth.getUser();
   const recoveryPage=["/", "/login", "/signup", "/callback", "/reset-password", "/update-password", "/auth/recovery", "/account-inactive"].includes(pathname);
-  const publicPage = recoveryPage || /^\/invite\/[^/]+$/.test(pathname);
+  const publicArtwork = pathname === '/opengraph-image' || pathname === '/twitter-image';
+  const publicPage = recoveryPage || publicArtwork || /^\/invite\/[^/]+$/.test(pathname);
   if (!user && !publicPage) {
     const response = pathname.startsWith("/api/")
       ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })

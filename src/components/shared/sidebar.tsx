@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -413,7 +414,7 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  if (confirm("Sign out of ProjectBoard?")) handleSignOut();
+                  if (confirm(`Sign out of ${BRAND.name}?`)) handleSignOut();
                 }}
               >
                 <LogOut className="mr-2 h-4 w-4" />

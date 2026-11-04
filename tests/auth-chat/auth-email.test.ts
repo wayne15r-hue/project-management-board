@@ -14,6 +14,12 @@ import { sendDueDateReminderEmail } from "@/lib/email";
 const reminder = { to: "user@example.test", recipientName: "User", cardTitle: "Work", boardId: "board", priority: "low", dueDate: "2026-11-01T12:00:00Z", urgency: "today" as const };
 beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("RESEND_API_KEY", "dummy"); vi.stubEnv("RESEND_FROM", "Board <mail@verified.example.test>"); });
 describe("session routing", () => {
+  it("allows public social artwork without exempting similarly named private paths", async () => {
+    for (const path of ['/opengraph-image', '/twitter-image']) {
+      expect((await updateSession(new NextRequest(`https://app.test${path}`))).status).toBe(200);
+      expect((await updateSession(new NextRequest(`https://app.test${path}/private`))).status).toBe(307);
+    }
+  });
   it("allows the exact callback while signed out", async () => {
     expect((await updateSession(new NextRequest("https://app.test/callback?code=abc"))).status).toBe(200);
   });

@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import { Resend } from "resend";
 
 let resendInstance: Resend | null = null;
@@ -44,8 +45,8 @@ function layout(body: string): string {
         <!-- Logo -->
         <tr><td style="padding-bottom:32px;">
           <span style="font-size:20px;font-weight:700;color:#37352F;">
-            <span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:6px;vertical-align:middle;margin-right:8px;text-align:center;line-height:28px;color:#fff;font-size:14px;">P</span>
-            ProjectBoard
+            <span style="display:inline-block;width:28px;height:28px;background:#FFB547;border-radius:6px;vertical-align:middle;margin-right:8px;text-align:center;line-height:28px;color:#080D19;font-size:14px;">H</span>
+            ${BRAND.name}
           </span>
         </td></tr>
         <!-- Body -->
@@ -54,7 +55,7 @@ function layout(body: string): string {
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding-top:24px;text-align:center;color:#787774;font-size:12px;">
-          &copy; ${new Date().getFullYear()} ProjectBoard. You received this email because of your account activity.
+          &copy; ${new Date().getFullYear()} ${BRAND.name}. You received this email because of your account activity.
         </td></tr>
       </table>
     </td></tr>
@@ -64,7 +65,7 @@ function layout(body: string): string {
 }
 
 function button(text: string, href: string): string {
-  return `<a href="${href}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-top:8px;">${text}</a>`;
+  return `<a href="${href}" style="display:inline-block;padding:12px 28px;background:#FFB547;color:#080D19;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-top:8px;">${text}</a>`;
 }
 
 function priorityBadge(priority: string): string {
@@ -251,7 +252,7 @@ export async function sendTeamInviteEmail(params: {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:20px;color:#37352F;">You're invited!</h2>
     <p style="margin:0 0 20px;color:#787774;font-size:14px;">
-      ${params.inviterName || "Someone"} invited you to join <strong>${params.teamName}</strong> on ProjectBoard.
+      ${params.inviterName || "Someone"} invited you to join <strong>${params.teamName}</strong> on ${BRAND.name}.
     </p>
     <p style="margin:0 0 8px;color:#787774;font-size:13px;">
       Collaborate on boards, track tasks, and stay in sync with your team.
@@ -262,7 +263,7 @@ export async function sendTeamInviteEmail(params: {
 
   await sendEmail({
     to: params.to,
-    subject: `You've been invited to join ${params.teamName} on ProjectBoard`,
+    subject: `You've been invited to join ${params.teamName} on ${BRAND.name}`,
     html,
   });
 }
