@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FloatingInput } from "@/components/auth/floating-input";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { internalRedirect } from "../redirect";
 
 export default function LoginPage() {
@@ -17,6 +17,8 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -28,6 +30,12 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (step === 1) {
+      setEmail(email.trim());
+      setError(null);
+      setStep(2);
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -62,37 +70,53 @@ function LoginForm() {
     <div className="space-y-6">
       <div>
         <h1 className="text-[26px] font-bold leading-tight text-foreground">
-          Welcome back <span className="wave-hand">👋</span>
+          {step === 1 ? 'Find your focus.' : 'You’re almost there.'}
         </h1>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
-          Sign in to continue to your workspace.
+          {step === 1 ? 'Sign in to your Helios workspace.' : 'Enter your password to continue.'}
         </p>
       </div>
 
       {authError && <p role="alert" className="text-destructive">Your sign-in or recovery link expired or could not be verified. Please try again.</p>}
       {error && (
-        <div className="rounded-md bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+        <div role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div className={step === 2 ? 'sr-only' : ''}>
         <FloatingInput
           label="Email"
           type="email"
-          autoComplete="email"
+          name="email"
+          autoComplete="username"
+          tabIndex={step === 2 ? -1 : undefined}
+          readOnly={step === 2}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        </div>
+        {step === 2 && <>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
+          <span className="min-w-0 break-all">{email}</span>
+          <Button type="button" variant="ghost" disabled={loading} onClick={()=>{setStep(1);setPassword('');setShowPassword(false);setError(null);}}>Change email</Button>
+        </div>
+        <div className="relative">
         <FloatingInput
           label="Password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
+          name="password"
+          className="pr-20"
           autoComplete="current-password"
+          autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <Button type="button" variant="ghost" className="absolute right-1 top-1 h-10" aria-label={showPassword?'Hide password':'Show password'} aria-pressed={showPassword} onClick={()=>setShowPassword(value=>!value)}>{showPassword?'Hide':'Show'}</Button>
+        </div>
 
         <div className="flex justify-end">
           <Link
@@ -102,14 +126,15 @@ function LoginForm() {
             Forgot password?
           </Link>
         </div>
+        </>}
 
         <Button
           type="submit"
-          className="h-11 w-full bg-foreground text-background transition-transform hover:bg-foreground/90 active:scale-[0.98]"
+          className="h-12 w-full"
           disabled={loading}
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign in
+          {step === 1 ? <>Next <ArrowRight aria-hidden="true" /></> : 'Sign in'}
         </Button>
       </form>
 

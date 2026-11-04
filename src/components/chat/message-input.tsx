@@ -131,13 +131,13 @@ export function MessageInput({
           </button>
         </div>
       )}
-      <div className="flex items-end gap-2 rounded-lg border border-border bg-background px-3 py-1.5 focus-within:border-ring">
+      <div className="flex items-end gap-2 rounded-xl border border-border bg-card px-3 py-2 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={sending || uploading}
           aria-label="Attach file"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
           <Paperclip className="h-3.5 w-3.5" />
         </button>
@@ -158,8 +158,9 @@ export function MessageInput({
           }}
           onKeyDown={onKey}
           placeholder="Write a message…"
+          aria-label="Message"
           rows={1}
-          className="max-h-40 min-h-[24px] flex-1 resize-none bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+          className="max-h-40 min-h-11 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
         />
         <button
           type="button"
@@ -167,7 +168,7 @@ export function MessageInput({
           disabled={!canSend}
           aria-label="Send message"
           className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+            "flex h-11 w-11 items-center justify-center rounded-lg transition-colors",
             canSend
               ? "bg-primary text-primary-foreground hover:opacity-90"
               : "text-muted-foreground"

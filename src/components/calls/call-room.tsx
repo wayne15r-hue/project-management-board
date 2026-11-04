@@ -2,6 +2,9 @@
 import {useEffect,useRef,useState} from 'react';
 import {Room,RoomEvent,Track,type RemoteTrack,type Participant} from 'livekit-client';
 import {Button} from '@/components/ui/button';
+import {Popover,PopoverTrigger,PopoverContent} from '@/components/ui/popover';
+import {DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from '@/components/ui/dropdown-menu';
+import {Ellipsis,Mic,MicOff,Video,VideoOff,ScreenShare,PhoneOff} from 'lucide-react';
 import {MediaSession,type CaptureKind} from '@/lib/calls/media-session';
 import {TrackVideo} from './track-video';
 import type {AudioCall} from '@/types/calls';
@@ -123,25 +126,26 @@ export function CallRoom({call,currentUserId,onLeave,onKick,expanded=true,initia
   {connection==='Disconnected'&&<Button size="sm" variant="outline" onClick={()=>{setConnection('Connecting…');setChanging(null);setAttempt(value=>value+1);}}>Reconnect call</Button>}
   {enabled.screen&&<p role="status" className="rounded bg-red-600 p-2 text-sm text-white">You are sharing your screen{enabled.screenAudio?' with tab audio':''}<Button size="sm" variant="secondary" className="ml-2" onClick={()=>sessionRef.current?.stop('screen')}>Stop sharing</Button></p>}
   <div className="flex flex-wrap gap-2">
-   <Button size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} aria-label={enabled.microphone?'Mute microphone':'Unmute microphone'} onClick={()=>void toggle('microphone')}>{enabled.microphone?'Mute':'Unmute'}</Button>
-   {capabilities.video&&<Button size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} onClick={()=>void toggle('camera')}>{enabled.camera?'Turn camera off':'Turn camera on'}</Button>}
-   {capabilities.screenShare&&typeof navigator!=='undefined'&&typeof navigator.mediaDevices?.getDisplayMedia==='function'&&!enabled.screen&&<Button size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} onClick={()=>void toggle('screen')}>{changing==='screen'?'Choosing screen…':'Share screen'}</Button>}
-   <Button size="sm" variant="outline" onClick={()=>void roomRef.current?.startAudio().then(()=>setAudioBlocked(false)).catch(()=>setError('Audio playback is blocked. Check your browser sound settings.'))}>Enable sound</Button>
-   <Button size="sm" variant="destructive" onClick={()=>{sessionRef.current?.close();onLeave();}}>{call.state==='ringing'?'Cancel call':'Leave call'}</Button>
+   <Button className="min-h-11" size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} aria-label={enabled.microphone?'Mute microphone':'Unmute microphone'} onClick={()=>void toggle('microphone')}>{enabled.microphone?<Mic aria-hidden="true"/>:<MicOff aria-hidden="true"/>}{enabled.microphone?'Mic on':'Mic off'}</Button>
+   {capabilities.video&&<Button className="min-h-11" size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} aria-label={enabled.camera?'Turn camera off':'Turn camera on'} onClick={()=>void toggle('camera')}>{enabled.camera?<Video aria-hidden="true"/>:<VideoOff aria-hidden="true"/>}{enabled.camera?'Camera on':'Camera off'}</Button>}
+   {capabilities.screenShare&&typeof navigator!=='undefined'&&typeof navigator.mediaDevices?.getDisplayMedia==='function'&&!enabled.screen&&<Button className="min-h-11" size="sm" variant="outline" disabled={connection!=='Connected'||!!changing} onClick={()=>void toggle('screen')}><ScreenShare aria-hidden="true"/>{changing==='screen'?'Choosing screen…':'Share screen'}</Button>}
+   {audioBlocked&&<Button className="min-h-11" size="sm" variant="outline" onClick={()=>void roomRef.current?.startAudio().then(()=>setAudioBlocked(false)).catch(()=>setError('Audio playback is blocked. Check your browser sound settings.'))}>Enable sound</Button>}
+   <Popover><PopoverTrigger render={<Button className="min-h-11" size="sm" variant="outline" aria-label="More call options"/>}><Ellipsis aria-hidden="true"/>More</PopoverTrigger><PopoverContent align="end" className="w-72 space-y-3">
+    <h3 className="text-sm font-semibold">Call options</h3>
+    {(['audioinput','videoinput','audiooutput'] as const).filter(kind=>kind!=='audiooutput'||'setSinkId' in HTMLMediaElement.prototype).filter(kind=>kind!=='videoinput'||capabilities.video).map(kind=><label key={kind} className="block text-sm">{kind==='audioinput'?'Microphone':kind==='videoinput'?'Camera':'Speaker'}<select disabled={!!changing} aria-label={`${kind==='audioinput'?'Microphone':kind==='videoinput'?'Camera':'Speaker'} device`} className="mt-1 min-h-11 w-full rounded-lg border bg-background p-2" value={kind==='audioinput'?input:kind==='videoinput'?camera:output} onChange={e=>void changeDevice(kind,e.target.value)}><option value="default">System default</option>{devices.filter(d=>d.kind===kind&&d.deviceId!=='default').map((d,i)=><option key={d.deviceId} value={d.deviceId}>{d.label||`Device ${i+1}`}</option>)}</select></label>)}
+    {capabilities.screenShare&&<label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={includeAudio} disabled={enabled.screen||changing==='screen'} onChange={e=>setIncludeAudio(e.target.checked)}/>Include tab audio (when safely supported)</label>}
+   </PopoverContent></Popover>
+   <Button className="min-h-11" size="sm" variant="destructive" onClick={()=>{sessionRef.current?.close();onLeave();}}><PhoneOff aria-hidden="true"/>{call.state==='ringing'?'Cancel call':'Leave call'}</Button>
   </div>
   <div hidden={!expanded}>
    {selected?.screen&&<section aria-label="Presentation" className="mb-3 rounded bg-black text-white"><p className="p-2 text-sm">{name(selected.identity)} is presenting</p><TrackVideo track={selected.screen} label={`${name(selected.identity)} shared screen`}/>{presentations.length>1&&<label className="block p-2 text-sm">Presentation<select aria-label="Select presentation" className="ml-2 rounded bg-gray-900 p-1" value={selected.identity} onChange={e=>{focusRef.current=e.target.value;setFocus(e.target.value);}}>{presentations.map(p=><option key={p.identity} value={p.identity}>{name(p.identity)}</option>)}</select></label>}</section>}
-   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Participant gallery">{call.participants.filter(p=>p.state==='joined'&&!p.blocked).map(p=>{
-    const person=people.find(q=>q.identity===p.media_identity);return <div key={p.user_id} className={`overflow-hidden rounded border p-2 ${speakers.includes(p.media_identity)?'ring-2 ring-green-500':''}`}>
-     <div className="flex aspect-video items-center justify-center rounded bg-muted">{person?.camera?<TrackVideo track={person.camera} mirror={p.user_id===currentUserId} label={`${p.display_name} camera`}/>:<span className="text-xs">Camera off</span>}</div>
-     <p className="mt-1 text-xs">{p.display_name}{p.user_id===currentUserId?' (you)':''} · {person?.muted!==false?'Muted':speakers.includes(p.media_identity)?'Speaking':'Mic on'}</p><p className="text-xs text-muted-foreground">{person?`Connected · ${person.quality}`:'Connecting'}</p>
-     {call.kind==='group'&&call.current_user_is_admin&&p.user_id!==currentUserId&&<Button size="sm" variant="ghost" aria-label={`Remove ${p.display_name} from call`} onClick={()=>onKick(p.user_id)}>Remove</Button>}
+   <div className="grid grid-cols-2 gap-3" aria-label="Participant gallery">{call.participants.filter(p=>p.state==='joined'&&!p.blocked).map(p=>{
+    const person=people.find(q=>q.identity===p.media_identity);return <div key={p.user_id} className={`relative overflow-hidden rounded-xl border bg-muted p-2 ${speakers.includes(p.media_identity)?'border-primary ring-1 ring-primary':''}`}>
+     <div className="flex aspect-video items-center justify-center rounded-lg">{person?.camera?<TrackVideo track={person.camera} mirror={p.user_id===currentUserId} label={`${p.display_name} camera`}/>:<span className="flex size-14 items-center justify-center rounded-full bg-accent text-xl font-medium text-accent-foreground" aria-label={`${p.display_name}, camera off`}>{(p.display_name||'?').trim().split(/\s+/u).slice(0,2).map(word=>Array.from(word)[0]).join('').toLocaleUpperCase()}</span>}</div>
+     <p className="mt-1 break-words text-xs">{p.display_name}{p.user_id===currentUserId?' (you)':''} · {person?.muted!==false?'Muted':speakers.includes(p.media_identity)?'Speaking':'Mic on'}</p>
+     {call.kind==='group'&&call.current_user_is_admin&&p.user_id!==currentUserId&&<DropdownMenu><DropdownMenuTrigger render={<Button size="icon" variant="ghost" className="absolute right-1 top-1" aria-label={`Participant actions for ${p.display_name}`}/>}><Ellipsis aria-hidden="true"/></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem variant="destructive" onClick={()=>onKick(p.user_id)}>Remove {p.display_name} from call</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
     </div>;
    })}</div>
-   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-    {(['audioinput','videoinput','audiooutput'] as const).filter(kind=>kind!=='audiooutput'||'setSinkId' in HTMLMediaElement.prototype).filter(kind=>kind!=='videoinput'||capabilities.video).map(kind=><label key={kind} className="text-xs">{kind==='audioinput'?'Microphone':kind==='videoinput'?'Camera':'Speaker'}<select disabled={!!changing} aria-label={`${kind==='audioinput'?'Microphone':kind==='videoinput'?'Camera':'Speaker'} device`} className="mt-1 w-full rounded border bg-background p-1" value={kind==='audioinput'?input:kind==='videoinput'?camera:output} onChange={e=>void changeDevice(kind,e.target.value)}><option value="default">System default</option>{devices.filter(d=>d.kind===kind&&d.deviceId!=='default').map((d,i)=><option key={d.deviceId} value={d.deviceId}>{d.label||`Device ${i+1}`}</option>)}</select></label>)}
-   </div>
-   {capabilities.screenShare&&<label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={includeAudio} disabled={enabled.screen||changing==='screen'} onChange={e=>setIncludeAudio(e.target.checked)}/>Include tab audio (when safely supported)</label>}
   </div>
   <div ref={audioRef} className="hidden" aria-hidden="true"/>
  </div>;

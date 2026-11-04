@@ -16,6 +16,11 @@ import {AudioRoom} from '@/components/calls/audio-room';
 const call:AudioCall={id:'call',conversation_id:'conv',caller_id:'me',caller_name:'Me',title:'QA audio',kind:'direct',state:'active',end_reason:null,created_at:'2026-11-02',started_at:'2026-11-02',ended_at:null,current_user_is_admin:true,participants:[{user_id:'me',media_identity:'session',display_name:'Me',state:'joined',blocked:false,heartbeat_at:'2026-11-02'}]};
 beforeEach(()=>{media.remotes.clear();media.handlers.clear();media.connect.mockReset().mockResolvedValue(undefined);media.disconnect.mockReset();const microphoneTrack={kind:'audio',stop:vi.fn(),addEventListener:vi.fn()};media.microphone.mockReset().mockResolvedValue({getTracks:()=>[microphoneTrack]});Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:media.microphone,enumerateDevices:async()=>[]}});vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({token:'synthetic-token',url:'wss://qa.livekit.cloud',capabilities:{video:true,screenShare:true}}))));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('keeps sound recovery contextual and moves device selection into More without reconnecting',async()=>{
+ render(<AudioRoom call={call} currentUserId="me" onLeave={()=>{}} onKick={()=>{}}/>);await screen.findByText('Connected');
+ expect(screen.queryByRole('button',{name:'Enable sound'})).toBeNull();expect(screen.queryByRole('combobox',{name:'Microphone device'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'More call options'}));expect(screen.getByRole('combobox',{name:'Microphone device'})).toBeTruthy();expect(media.connect).toHaveBeenCalledTimes(1);
+});
 it('connects muted, explains denied microphone access, and lets the user retry',async()=>{
  media.microphone.mockRejectedValueOnce(new DOMException('Denied','NotAllowedError'));
  render(<AudioRoom call={call} currentUserId="me" onLeave={()=>{}} onKick={()=>{}}/>);

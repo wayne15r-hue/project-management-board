@@ -9,21 +9,6 @@ function initials(name: string): string {
     .join("");
 }
 
-function colorFor(name: string): string {
-  const palette = [
-    "#E8A87C",
-    "#7CAFC4",
-    "#9B8FBF",
-    "#8BAE68",
-    "#D4846A",
-    "#C4A464",
-    "#6B9EAE",
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return palette[Math.abs(hash) % palette.length];
-}
-
 interface Props {
   name: string;
   src?: string | null;
@@ -35,7 +20,6 @@ export function Avatar({ name, src, size = 32 }: Props) {
     width: size,
     height: size,
     fontSize: Math.max(10, size * 0.38),
-    backgroundColor: src ? undefined : colorFor(name),
   };
   if (src) {
     return (
@@ -51,7 +35,7 @@ export function Avatar({ name, src, size = 32 }: Props) {
   return (
     <div
       style={style}
-      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      className="flex shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground"
     >
       {initials(name)}
     </div>

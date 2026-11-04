@@ -15,6 +15,14 @@ it('requires existing and new users to complete setup and preserves deep links',
   expect(url.pathname).toBe('/employee-setup');
   expect(url.searchParams.get('next')).toBe('/dashboard/board/b?card=c');
 });
+it('requires one-time names independently of completed employee setup and preserves deep links',async()=>{
+ mocks.rpc.mockImplementation(async(name:string)=>({data:name==='profile_name_ready'?false:true,error:null}));
+ mocks.maybeSingle.mockResolvedValue({data:{completed_at:'now'},error:null});
+ const response=await updateSession(new NextRequest('https://app.test/dashboard/chat?conversation=abc'));
+ const url=new URL(response.headers.get('location')!);expect(url.pathname).toBe('/name-setup');expect(url.searchParams.get('next')).toBe('/dashboard/chat?conversation=abc');
+ expect((await updateSession(new NextRequest('https://app.test/api/boards'))).status).toBe(403);
+ expect((await updateSession(new NextRequest('https://app.test/api/profile/name'))).status).toBe(200);
+});
 it('preserves invitations through setup',async()=>{
   const r=await updateSession(new NextRequest('https://app.test/invite/abc'));
   expect(new URL(r.headers.get('location')!).searchParams.get('next')).toBe('/invite/abc');

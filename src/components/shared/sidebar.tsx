@@ -340,7 +340,7 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
               )}
             >
               <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#7CAFC4] text-[11px] font-semibold text-white"
+                className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent text-[11px] font-semibold text-accent-foreground"
                 style={
                   userAvatarUrl
                     ? {

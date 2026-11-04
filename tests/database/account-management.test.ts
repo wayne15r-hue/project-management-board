@@ -76,6 +76,7 @@ it('invalidates unauthorized leases and limits password reset replays',async()=>
   expect((await db.query('select account_validate_operation($1,$2) ok',[op(5),lease])).rows[0]).toEqual({ok:false});
 });
 it('protects private board contents and atomically preserves work through Auth deletion',async()=>{
+  await asUser(db,1,'select profile_admin_correct_name($1,$2,$3)',[uid(2),'Alex','Taylor']);
   const before = await preview(2);
   expect(before.result.blockers.length).toBeGreaterThan(0);
   expect(JSON.stringify(before)).not.toContain('Other board');
@@ -94,6 +95,8 @@ it('protects private board contents and atomically preserves work through Auth d
   await db.query('delete from auth.users where id=$1',[uid(2)]);
   await db.query("select account_finish_operation($1,$2,'succeeded',null)",[op(7),lease]);
   expect((await db.query('select full_name,auth_user_id from profiles where id=$1',[uid(2)])).rows[0]).toEqual({full_name:'Deleted user',auth_user_id:null});
+  expect((await db.query('select first_name,last_name from profiles where id=$1',[uid(2)])).rows[0]).toEqual({first_name:null,last_name:null});
+  expect((await db.query<{before_data:unknown;after_data:unknown}>('select before_data,after_data from employee_change_log where subject_id=$1',[uid(2)])).rows.every(row=>row.before_data===null&&row.after_data===null)).toBe(true);
   expect((await db.query("select owner_id from storage.objects where bucket_id='chat-files'")).rows[0]).toEqual({owner_id:uid(1)});
   expect((await db.query('select id from boards where id=$1',[board])).rows).toHaveLength(1);
 });

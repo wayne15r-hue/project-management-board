@@ -21,7 +21,7 @@ it('opens group details from the group header while retaining the thread',async(
   vi.stubGlobal('fetch',vi.fn(async(url:string)=>json(url.endsWith('/group')?{name:'QA group',members:[{...user,is_admin:true}]}:url.endsWith('/read')?{}:[message])));
   render(<MessageThread {...props} conversation={{...conversation,type:'group',name:'QA group'}}/>);
   await screen.findByText('Reaction fixture');
-  fireEvent.click(screen.getByRole('button',{name:'Group details'}));
+  fireEvent.click(screen.getByRole('button',{name:'More conversation actions'}));fireEvent.click(await screen.findByRole('menuitem',{name:'Group details'}));
   await screen.findByRole('dialog',{name:'Group details'});
   expect(screen.getByText('Admin')).toBeTruthy();
 });

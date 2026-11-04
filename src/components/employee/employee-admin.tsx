@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { EmployeeForm } from './employee-form';
 import { DirectoryForm, accountSelectClass } from './directory-form';
 import { AccountControls, accountDate } from './account-controls';
+import { NameForm } from '@/components/profile/name-form';
+import { useRouter } from 'next/navigation';
 import { AccountAudit } from './account-audit';
 import type { Department, EmployeeIdentity, EmployeeState } from '@/types/employee';
 import type { AccountDirectory, AccountPerson } from '@/types/accounts';
@@ -17,6 +19,8 @@ async function read<T>(url:string):Promise<T> {
 }
 export function EmployeeAdmin() {
   const cache=useQueryClient();
+  const router=useRouter();
+  const [nameEditing,setNameEditing]=useState<AccountPerson|null>(null);
   const [tab,setTab]=useState<'people'|'departments'|'admins'|'audit'>('people');
   const [query,setQuery]=useState('');const [page,setPage]=useState(1);
   const [filters,setFilters]=useState({department:'',manager:'',role:'',status:'',setup:''});
@@ -32,7 +36,8 @@ export function EmployeeAdmin() {
   async function mutate(url:string,method:string,value:unknown) {
     const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
     const data=await r.json();if(!r.ok)throw new Error(data.error??'Could not save changes');
-    await cache.invalidateQueries({queryKey:['employee-admin']});
+    await cache.invalidateQueries();
+    router.refresh();
     setMessage('Changes saved.');
   }
   async function changeAdmin(userId:string,enabled:boolean) {
@@ -52,6 +57,7 @@ export function EmployeeAdmin() {
     </div>
     {message&&<p role="status" className="text-sm">{message}</p>}
     {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+    {nameEditing&&<section aria-label="Correct employee name" className="space-y-4 rounded-xl border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">Correct name</h2><Button variant="ghost" onClick={()=>setNameEditing(null)}>Cancel name correction</Button></div><p className="break-words text-sm">Current name: {nameEditing.full_name??'Not set'} · {nameEditing.email}</p><p className="text-sm text-muted-foreground">Enter the corrected first name and optional surname. This correction is recorded in the audit log.</p><NameForm key={nameEditing.id} submitLabel="Save corrected name" onSave={async value=>{await mutate(`/api/admin/employees/${nameEditing.id}/name`,'PATCH',value);setNameEditing(null);}}/></section>}
     {tab==='audit'?<AccountAudit/>:tab==='departments'?<div className="space-y-4">
       <DepartmentEditor key="new" onSave={async name=>{await mutate('/api/admin/departments','POST',{id:null,name,archived:false});}}/>
       {state.data.departments.map(d=><DepartmentEditor key={d.id+':'+d.name+':'+d.archived} department={d} onSave={async(name,archived)=>{await mutate('/api/admin/departments','POST',{id:d.id,name,archived:archived??d.archived});}}/>)}
@@ -85,7 +91,7 @@ export function EmployeeAdmin() {
             <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2"><div><dt className="text-muted-foreground">Account status</dt><dd className="capitalize">{person.account.status}</dd></div><div><dt className="text-muted-foreground">Email verification</dt><dd>{person.account.emailVerified?'Email verified':'Email unverified'}</dd></div><div><dt className="text-muted-foreground">Account created</dt><dd>{accountDate(person.account.createdAt)}</dd></div><div><dt className="text-muted-foreground">Last sign-in</dt><dd>{person.account.lastSignInAt?accountDate(person.account.lastSignInAt):'Never signed in'}</dd></div></dl>
             <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">{[['Employee ID',person.directory.employeeId],['Work location',person.directory.workLocation],['Employment joining date',person.directory.joiningDate],['Employment type',person.directory.employmentType]].map(([label,value])=><div key={label}><dt className="text-muted-foreground">{label}</dt><dd>{value??'Not specified'}</dd></div>)}</dl>
           </div>
-          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!person.record||person.account.status==='deleted'} onClick={()=>{setEditing(person);setDirectoryEditing(null);setMessage('');}}>Edit details</Button><Button variant="outline" disabled={person.account.status==='deleted'} onClick={()=>{setDirectoryEditing(person);setEditing(null);setMessage('');}}>Edit directory</Button>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={person.account.status==='deleted'||person.account.status==='deleting'} onClick={()=>{setNameEditing(person);setEditing(null);setDirectoryEditing(null);}}>Correct name</Button><Button variant="outline" disabled={!person.record||person.account.status==='deleted'} onClick={()=>{setEditing(person);setDirectoryEditing(null);setMessage('');}}>Edit details</Button><Button variant="outline" disabled={person.account.status==='deleted'} onClick={()=>{setDirectoryEditing(person);setEditing(null);setMessage('');}}>Edit directory</Button>
             {owner&&person.adminRole!=='owner'&&person.account.status==='active'&&<Button variant="outline" disabled={busy} onClick={()=>void changeAdmin(person.id,!person.adminRole)}>{person.adminRole?'Remove admin access':'Grant admin access'}</Button>}
           </div>
           <AccountControls person={person} viewerId={state.data.userId} owner={owner}/>

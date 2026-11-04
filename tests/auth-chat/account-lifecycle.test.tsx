@@ -11,7 +11,7 @@ afterEach(cleanup);
 beforeEach(() => { vi.clearAllMocks(); });
 function signupForm() {
   render(<SignupPage />);
-  fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "User" } });
+  fireEvent.change(screen.getByLabelText("First name"), { target: { value: "User" } });
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "u@example.test" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "Password12!" } });
   fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "Password12!" } });
