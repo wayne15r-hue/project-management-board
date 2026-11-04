@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ export default function InviteAcceptPage() {
             <>
               <CardTitle>Team Invitation</CardTitle>
               <CardDescription>
-                You&apos;ve been invited to join a team on ProjectBoard.
+                You&apos;ve been invited to join a team on {BRAND.name}.
               </CardDescription>
             </>
           )}

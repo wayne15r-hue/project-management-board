@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/brand";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -10,8 +11,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ProjectBoard",
-  description: "A kanban-style project management app",
+  title: { default: `${BRAND.name} | Projects, people and daily operations`, template: `%s | ${BRAND.name}` },
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  openGraph: { title: BRAND.name, description: BRAND.description, type: "website", siteName: BRAND.name },
+  twitter: { card: "summary_large_image", title: BRAND.name, description: BRAND.description },
 };
 
 export default function RootLayout({
