@@ -88,7 +88,7 @@ export default function SignupPage() {
           Create your account
         </h1>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
-          Start shipping in under a minute. No credit card required.
+          Create an account, then complete your employee setup.
         </p>
       </div>
 
