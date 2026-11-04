@@ -264,9 +264,6 @@ export function LandingPage() {
         <nav aria-label="Footer navigation">
           <a href="#product">Product</a>
           <a href="#faq">FAQ</a>
-          <a href={BRAND.repository}>
-            GitHub <ArrowRight size={13} aria-hidden="true" />
-          </a>
           <Link href="/login">Sign in</Link>
         </nav>
         <small>
