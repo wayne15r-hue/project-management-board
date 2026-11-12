@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BoardList } from "@/components/board/board-list";
+import { BoardInvitationInbox } from "@/components/board/board-invitation-inbox";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
@@ -81,6 +82,7 @@ export default async function DashboardPage() {
 
       <div className="mb-6 grid gap-5 lg:grid-cols-[1fr_320px]">
         <div>
+          <BoardInvitationInbox userId={user!.id} />
           <h2 className="mb-4 text-[15px] font-semibold text-foreground">
             Your boards
           </h2>

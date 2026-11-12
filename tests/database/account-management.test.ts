@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import fs from 'node:fs';
 import type { PGlite } from '@electric-sql/pglite';
-import { asUser, board, database, uid } from './fixture';
+import { asUser, board, card, database, uid } from './fixture';
 import type { AccountOperation, DeletionPreview } from '../../src/types/accounts';
 
 let db: PGlite;
@@ -77,6 +77,8 @@ it('invalidates unauthorized leases and limits password reset replays',async()=>
 });
 it('protects private board contents and atomically preserves work through Auth deletion',async()=>{
   await asUser(db,1,'select profile_admin_correct_name($1,$2,$3)',[uid(2),'Alex','Taylor']);
+  await asUser(db,1,'update cards set assignee_id=$1 where id=$2',[uid(2),card]);
+  await asUser(db,1,'select board_invite_send($1,$2)',[board,'outsider@example.test']);
   const before = await preview(2);
   expect(before.result.blockers.length).toBeGreaterThan(0);
   expect(JSON.stringify(before)).not.toContain('Other board');
@@ -92,6 +94,8 @@ it('protects private board contents and atomically preserves work through Auth d
   const lease = await claimed(7);
   await expect(db.query("select account_finish_operation($1,$2,'succeeded',null)",[op(7),lease])).rejects.toThrow();
   await db.query('select account_prepare_delete($1,$2)',[op(7),lease]);
+  expect((await db.query('select assignee_id from cards where id=$1',[card])).rows[0]).toEqual({assignee_id:uid(1)});
+  expect((await asUser(db,3,'select id from board_invite_inbox()')).rows).toHaveLength(1);
   await db.query('delete from auth.users where id=$1',[uid(2)]);
   await db.query("select account_finish_operation($1,$2,'succeeded',null)",[op(7),lease]);
   expect((await db.query('select full_name,auth_user_id from profiles where id=$1',[uid(2)])).rows[0]).toEqual({full_name:'Deleted user',auth_user_id:null});

@@ -13,14 +13,18 @@ import { BoardAnalytics } from "@/components/analytics/board-analytics";
 import { CalendarView } from "@/components/board/calendar-view";
 import { useRealtimeCards } from "@/hooks/use-realtime-cards";
 import { useBoardPresence } from "@/hooks/use-board-presence";
+import { useBoardSharing } from "@/hooks/use-board-sharing";
 import { useBoardStore } from "@/stores/board-store";
 import { CardDetailDialog } from "@/components/board/card-detail-dialog";
 import { decodeBoardState, encodeBoardState, targetCardId } from "@/lib/board-url-state";
 import { applyViewToColumns } from "@/lib/board-filters";
 import { getBoardThemeClass } from "@/lib/board-themes";
 import { BoardSkeleton } from "@/components/board/board-skeleton";
+import { useDashboardUserId } from "@/components/shared/auth-session-boundary";
 import { cn } from "@/lib/utils";
 import type { BoardWithDetails, Profile } from "@/types";
+
+const noMembers: Profile[] = [];
 
 async function fetchBoard(boardId: string): Promise<BoardWithDetails> {
   const res = await fetch(`/api/boards/${boardId}`);
@@ -28,14 +32,9 @@ async function fetchBoard(boardId: string): Promise<BoardWithDetails> {
   return res.json();
 }
 
-async function fetchMembers(): Promise<Profile[]> {
-  const res = await fetch("/api/members");
-  if (!res.ok) return [];
-  return res.json();
-}
-
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
+  const userId = useDashboardUserId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -68,18 +67,29 @@ export default function BoardPage() {
   }), [pathname, router]);
 
   const {
-    data: board,
+    data: boardData,
+    isError,
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["board", boardId],
+    queryKey: ["board", boardId, userId],
     queryFn: () => fetchBoard(boardId),
   });
 
-  const { data: members = [] } = useQuery({
-    queryKey: ["members"],
-    queryFn: fetchMembers,
-  });
+  const sharingQuery = useBoardSharing(boardId);
+  const sharing = sharingQuery.isError ? undefined : sharingQuery.data;
+  const members = sharing?.members ?? noMembers;
+  const assignmentsLocked = (sharing?.pendingCount ?? 0) > 0;
+  const board = useMemo(() => boardData && { ...boardData, assignmentsLocked }, [boardData, assignmentsLocked]);
+  const boardPeople = useMemo(() => {
+    const people = new Map(members.map((member) => [member.id, member]));
+    for (const column of boardData?.columns ?? []) {
+      for (const card of column.cards) {
+        if (card.assignee && !people.has(card.assignee.id)) people.set(card.assignee.id, card.assignee);
+      }
+    }
+    return [...people.values()];
+  }, [boardData, members]);
 
   useRealtimeCards(boardId);
   const presence = useBoardPresence(boardId);
@@ -96,7 +106,7 @@ export default function BoardPage() {
     return <BoardSkeleton />;
   }
 
-  if (!board || !filteredBoard) {
+  if (isError || !board || !filteredBoard) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground">Board not found</p>
@@ -113,6 +123,8 @@ export default function BoardPage() {
       <BoardHeader
         board={board}
         members={members}
+        filterMembers={boardPeople}
+        sharing={sharing}
         activeView={activeView}
         onViewChange={setActiveView}
         presence={presence}
@@ -175,7 +187,7 @@ export default function BoardPage() {
         )}
 
         {activeView === "analytics" && (
-          <BoardAnalytics board={filteredBoard} members={members} />
+          <BoardAnalytics board={filteredBoard} members={boardPeople} />
         )}
       </div>
     </div>

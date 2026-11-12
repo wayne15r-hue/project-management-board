@@ -21,7 +21,7 @@ interface Props {
   currentAssigneeId: string | null;
   members: Profile[];
   onApplyPriority: (p: Priority) => void;
-  onApplyAssignee: (id: string) => void;
+  onApplyAssignee: (id: string) => Promise<boolean>;
   onApplyLabel: (label: Label) => void;
 }
 
@@ -150,9 +150,8 @@ export function AISuggestions({
       )}
       {showAssignee && suggestedMember && (
         <SuggestionChip
-          onClick={() => {
-            onApplyAssignee(suggestedMember.id);
-            toast.success("Assigned");
+          onClick={async () => {
+            if (await onApplyAssignee(suggestedMember.id)) toast.success("Assigned");
           }}
         >
           Assign: {suggestedMember.full_name || suggestedMember.email}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { responseError } from "@/lib/response-error";
 import type { BoardWithDetails, Profile, Priority } from "@/types";
 
 interface ParsedCard {
@@ -72,7 +73,7 @@ export function AICreateBar({ board, members, onCreated }: AICreateBarProps) {
       }
 
       const assigneeName = (preview.assignee_name ?? "").trim();
-      const assignee = assigneeName
+      const assignee = assigneeName && !board.assignmentsLocked
         ? members.find((m) =>
             (m.full_name || m.email || "")
               .toLowerCase()
@@ -113,7 +114,7 @@ export function AICreateBar({ board, members, onCreated }: AICreateBarProps) {
           assignee_id: assignee?.id ?? undefined,
         }),
       });
-      if (!createRes.ok) throw new Error("Create failed");
+      if (!createRes.ok) throw await responseError(createRes, "Failed to create card");
       const newCard = await createRes.json();
 
       // Attach labels (best effort)
@@ -133,8 +134,8 @@ export function AICreateBar({ board, members, onCreated }: AICreateBarProps) {
       setPreview(null);
       setValue("");
       onCreated();
-    } catch {
-      toast.error("Failed to create card");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create card");
     } finally {
       setCreating(false);
     }
@@ -282,7 +283,9 @@ function AIPreviewCard({
             className="rounded-md border border-border bg-background px-2 py-1"
           />
           <select
-            value={safeAssignee}
+            aria-label="Assignee"
+            disabled={board.assignmentsLocked}
+            value={board.assignmentsLocked ? "" : safeAssignee}
             onChange={(e) =>
               onChange({
                 ...preview,
@@ -291,7 +294,7 @@ function AIPreviewCard({
             }
             className="rounded-md border border-border bg-background px-2 py-1"
           >
-            <option value="">No assignee</option>
+            <option value="">{board.assignmentsLocked ? "Assignments paused" : "No assignee"}</option>
             {members.map((m) => (
               <option key={m.id} value={m.full_name || m.email}>
                 {m.full_name || m.email}

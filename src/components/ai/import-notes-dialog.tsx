@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Sparkles, Loader2, ArrowLeft } from "lucide-react";
+import { responseError } from "@/lib/response-error";
 import type { BoardWithDetails, Profile, Priority } from "@/types";
 
 interface ExtractedTask {
@@ -43,6 +44,11 @@ export function ImportNotesDialog({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [columnId, setColumnId] = useState(board.columns[0]?.id ?? "");
   const [creating, setCreating] = useState(false);
+  const assignees = tasks?.map((task) => {
+    const name = task.assignee_name?.trim().toLowerCase();
+    if (!name || board.assignmentsLocked) return undefined;
+    return members.find((member) => (member.full_name || member.email).toLowerCase().includes(name));
+  });
 
   async function extract() {
     if (!notes.trim()) return;
@@ -79,17 +85,12 @@ export function ImportNotesDialog({
   async function createTasks() {
     if (!tasks || !columnId) return;
     setCreating(true);
+    let created = 0;
     try {
-      const picked = tasks.filter((_, i) => selected.has(i));
-      for (const t of picked) {
-        const assignee = t.assignee_name
-          ? members.find((m) =>
-              (m.full_name || m.email)
-                .toLowerCase()
-                .includes(t.assignee_name!.toLowerCase())
-            )
-          : null;
-        await fetch(`/api/boards/${board.id}/cards`, {
+      for (const [index, t] of tasks.entries()) {
+        if (!selected.has(index)) continue;
+        const assignee = assignees?.[index];
+        const response = await fetch(`/api/boards/${board.id}/cards`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -101,14 +102,21 @@ export function ImportNotesDialog({
             assignee_id: assignee?.id ?? undefined,
           }),
         });
+        if (!response.ok) throw await responseError(response, "Failed to create card");
+        created++;
+        setSelected((current) => {
+          const next = new Set(current);
+          next.delete(index);
+          return next;
+        });
       }
-      toast.success(`Created ${picked.length} cards ✨`);
+      toast.success(`Created ${created} cards`);
       reset();
       onOpenChange(false);
-      onCreated();
-    } catch {
-      toast.error("Failed to create some cards");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create some cards");
     } finally {
+      if (created > 0) onCreated();
       setCreating(false);
     }
   }
@@ -226,7 +234,7 @@ export function ImportNotesDialog({
                       )}
                       {t.assignee_name && (
                         <span className="rounded-full bg-muted px-2 py-0.5">
-                          {t.assignee_name}
+                          {assignees?.[i]?.full_name || assignees?.[i]?.email || "Unassigned"}
                         </span>
                       )}
                     </div>
