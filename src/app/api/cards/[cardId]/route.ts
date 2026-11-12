@@ -208,8 +208,8 @@ export async function PATCH(
 
         const newPosition = (maxCard?.position ?? -1) + 1;
 
-        // Create the recurring copy
-        const { data: newCard } = await supabase
+        // Retry without the inherited assignee if sharing or account status blocks it.
+        const insertCopy = (assigneeId: string | null) => supabase
           .from("cards")
           .insert({
             column_id: firstColumn.id,
@@ -220,7 +220,7 @@ export async function PATCH(
             position: newPosition,
             due_date: newDueDate,
             start_date: null,
-            assignee_id: data.assignee_id,
+            assignee_id: assigneeId,
             created_by: data.created_by,
             recurrence_rule: data.recurrence_rule,
             recurrence_parent_id: data.id,
@@ -229,6 +229,13 @@ export async function PATCH(
           })
           .select()
           .single();
+        let copy = await insertCopy(data.assignee_id);
+        if (data.assignee_id && (copy.error?.code === "PT409" ||
+          (copy.error?.code === "22023" && copy.error.message === "An active account is required for assignee_id"))) {
+          copy = await insertCopy(null);
+        }
+        if (copy.error) throw copy.error;
+        const newCard = copy.data;
 
         // Copy labels from original card to new card
         if (newCard) {

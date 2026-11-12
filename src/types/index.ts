@@ -154,4 +154,19 @@ export interface ActivityLog {
 
 export interface BoardWithDetails extends Board {
   columns: (Column & { cards: Card[] })[];
+  assignmentsLocked?: boolean;
+}
+
+export interface BoardSharing {
+  canInvite: boolean;
+  members: Profile[];
+  pendingCount: number;
+  pendingInvitations: { id: string; email: string }[];
+}
+
+export interface BoardInvitation {
+  id: string;
+  board_id: string;
+  board_name: string;
+  inviter_name: string | null;
 }

@@ -9,8 +9,9 @@ import { AlertCircle, CalendarDays, CheckSquare, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { CardDetailDialog } from "@/components/board/card-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
+import { useBoardSharing } from "@/hooks/use-board-sharing";
 import { cn } from "@/lib/utils";
-import type { BoardWithDetails, Card, Profile } from "@/types";
+import type { BoardWithDetails, Card } from "@/types";
 import type { MyWorkItem, MyWorkResponse } from "@/types/my-work";
 import { MyWorkTickets } from '@/components/service-desk/my-work-tickets';
 import { MyWorkLeave } from '@/components/leave-desk/my-work-leave';
@@ -126,6 +127,7 @@ function WorkRow({item,timezone,onOpen}:{item:MyWorkItem;timezone:string;onOpen:
 
 function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:string;onClose:()=>void;onRefresh:()=>Promise<unknown>}){
   const client=useQueryClient();
+  const sharing=useBoardSharing(item.board_id);
   const requests=useRef<AbortController|null>(null);
   useEffect(()=>{
     const controller=new AbortController();requests.current=controller;
@@ -134,10 +136,10 @@ function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:stri
   const details=useQuery({
     queryKey:["my-work",userId,"editor",item.id],gcTime:0,staleTime:0,refetchOnWindowFocus:false,
     queryFn:async({signal})=>{
-      const [board,card,members]=await Promise.all([
+      const [board,card]=await Promise.all([
         read<BoardWithDetails>(`/api/boards/${item.board_id}`,signal),
-        read<Card>(`/api/cards/${item.id}`,signal),read<Profile[]>("/api/members",signal),
-      ]);return {board,card,members};
+        read<Card>(`/api/cards/${item.id}`,signal),
+      ]);return {board,card};
     },
   });
   async function update(cardId:string,data:Partial<Card>){
@@ -158,5 +160,7 @@ function WorkEditor({item,userId,onClose,onRefresh}:{item:MyWorkItem;userId:stri
     await Promise.all([onRefresh(),client.invalidateQueries({queryKey:["board",item.board_id]})]);
   }
   if(details.isPending||details.isError)return <div role={details.isError?"alert":"status"} className="fixed bottom-5 right-5 z-50 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-background p-4 shadow-lg"><p className="mb-2 text-sm">{details.isError?"Unable to open this task. It may have been removed or access changed.":"Opening task…"}</p>{details.isError&&<Button size="sm" variant="outline" onClick={()=>void details.refetch()}>Retry opening task</Button>}<Button size="sm" variant="ghost" onClick={onClose}>Close</Button></div>;
-  return <CardDetailDialog card={details.data.card} board={details.data.board} columns={details.data.board.columns} members={details.data.members} open onOpenChange={open=>{if(!open)onClose();}} onUpdate={update} onDelete={remove}/>;
+  const boardSharing=sharing.isError?undefined:sharing.data;
+  const board={...details.data.board,assignmentsLocked:(boardSharing?.pendingCount??0)>0};
+  return <CardDetailDialog card={details.data.card} board={board} columns={board.columns} members={boardSharing?.members??[]} open onOpenChange={open=>{if(!open)onClose();}} onUpdate={update} onDelete={remove}/>;
 }

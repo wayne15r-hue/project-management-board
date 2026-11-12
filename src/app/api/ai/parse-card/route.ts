@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude, aiErrorResponse } from "@/lib/ai/client";
 import { PARSE_CARD_SYSTEM } from "@/lib/ai/prompts";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
+import type { BoardSharing } from "@/types";
 
 type RawCard = {
   title?: unknown;
@@ -85,7 +87,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing boardId" }, { status: 400 });
   }
 
-  const [{ data: cols }, { data: labels }, { data: members }, { data: profile }] =
+  const [{ data: cols }, { data: labels }, { data: sharing, error: sharingError }, { data: profile }] =
     await Promise.all([
       supabase
         .from("columns")
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
         .eq("board_id", boardId)
         .order("position"),
       supabase.from("labels").select("name, color").eq("board_id", boardId),
-      supabase.rpc('account_identity_search',{p_query:'',p_exclude:null,p_limit:50}),
+      supabase.rpc("board_share_context", { p_board: boardId }),
       supabase
         .from("profiles")
         .select("full_name, email")
@@ -101,9 +103,9 @@ export async function POST(request: Request) {
         .single(),
     ]);
 
-  const memberNames = (members ?? [])
-    .map((m:{full_name:string|null;email:string}) => m.full_name || m.email)
-    .filter(Boolean) as string[];
+  if (sharingError) return workflowErrorResponse(sharingError);
+  const { members, pendingCount } = sharing as BoardSharing;
+  const memberNames = pendingCount ? [] : members.slice(0, 50).map((member) => member.full_name || member.email);
   const currentUserName =
     profile?.full_name || profile?.email || "current user";
 

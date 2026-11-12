@@ -7,6 +7,7 @@ vi.mock("@/lib/supabase/client",()=>({createClient:()=>({auth:{getUser:async()=>
 vi.mock("next/navigation",()=>({useRouter:()=>({refresh:vi.fn(),push:vi.fn()})}));
 vi.mock("@tanstack/react-query",()=>({useQueryClient:()=>({})}));
 vi.mock("@/components/board/workflow-settings-dialog",()=>({WorkflowSettingsDialog:()=> <div role="dialog">Workflow settings draft</div>}));
+vi.mock("@/components/board/board-share-dialog",()=>({BoardShareDialog:()=>null}));
 vi.mock("@/components/board/view-controls",()=>({ViewControls:()=>null}));
 vi.mock("@/components/board/import-cards-dialog",()=>({ImportCardsDialog:()=>null}));
 vi.mock("@/components/ai/board-summary-dialog",()=>({BoardSummaryDialog:()=>null}));

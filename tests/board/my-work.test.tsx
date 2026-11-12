@@ -53,7 +53,7 @@ describe("My Work",()=>{
       if(path==="/api/cards/one"&&options?.method==="PATCH")return {ok:true,json:async()=>({...item,title:"Updated supplier"})} as Response;
       if(path==="/api/cards/one")return {ok:true,json:async()=>item} as Response;
       if(path==="/api/boards/board")return {ok:true,json:async()=>({id:"board",name:"Operations",columns:[]})} as Response;
-      if(path==="/api/members")return {ok:true,json:async()=>[]} as Response;
+      if(path==="/api/boards/board/sharing")return {ok:true,json:async()=>({members:[],pendingCount:0,canInvite:false,pendingInvitations:[]})} as Response;
       return {ok:true,json:async()=>result} as Response;
     });
     mount();fireEvent.click(await screen.findByRole("button",{name:"Call supplier"}));

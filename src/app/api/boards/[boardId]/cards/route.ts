@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createCardSchema } from "@/lib/validators/card";
 import { createNotification } from "@/lib/notifications";
+import { workflowErrorResponse } from "@/lib/workflows/errors";
 
 export async function POST(
   request: Request,
@@ -57,7 +58,7 @@ export async function POST(
     )
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return workflowErrorResponse(error);
 
   if (data.assignee_id && data.assignee_id !== user.id) {
     await createNotification({

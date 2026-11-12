@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CardDetailDialog } from "../../src/components/board/card-detail-dialog";
-import type { Card } from "../../src/types";
+import type { Card, Profile } from "../../src/types";
 
 vi.mock("@tanstack/react-query",()=>({useQueryClient:()=>({invalidateQueries:vi.fn()})}));
 vi.mock("@/components/ui/dialog", () => ({ Dialog: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogContent: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogHeader: ({children}: {children: React.ReactNode}) => <div>{children}</div>, DialogTitle: ({children}: {children: React.ReactNode}) => <div>{children}</div> }));
@@ -12,11 +12,31 @@ vi.mock("@/components/board/approval-panel", () => ({ApprovalPanel: () => <div>A
 vi.mock("@/components/board/attachments", () => ({Attachments: () => null}));
 vi.mock("@/components/board/label-picker", () => ({LabelPicker: () => null}));
 vi.mock("@/components/activity/activity-feed", () => ({ActivityFeed: () => null}));
-vi.mock("@/components/ai/ai-suggestions", () => ({AISuggestions: () => null}));
+vi.mock("@/components/ai/ai-suggestions", () => ({
+  AISuggestions: ({ members, onApplyAssignee }: { members: Profile[]; onApplyAssignee: (id: string) => Promise<boolean> }) =>
+    members.map((member) => <button key={member.id} onClick={() => void onApplyAssignee(member.id)}>Assign {member.full_name}</button>),
+}));
 vi.mock("@/components/ai/ai-writing-assistant", () => ({AIWritingAssistant: () => null}));
 const card = {id:"one",title:"Original",description:null,priority:"medium",column_id:"a",created_at:"2026-01-01"} as Card;
 afterEach(cleanup);
 describe("card editor write failure", () => {
+  it("keeps subsequent edits independent when a stale assignment is rejected", async () => {
+    let rejectAssignment!: (error: Error) => void;
+    const update = vi.fn().mockImplementationOnce(() => new Promise<void>((_resolve, reject) => {
+      rejectAssignment = reject;
+    })).mockResolvedValue(undefined);
+    const member = { id: "member", full_name: "Teammate", email: "teammate@example.test", avatar_url: null, created_at: "", updated_at: "" };
+    render(<CardDetailDialog card={card} columns={[]} members={[member]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Assign Teammate" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith("one", { assignee_id: "member" }));
+    const title = screen.getByPlaceholderText("Untitled");
+    fireEvent.change(title, { target: { value: "New title" } });
+    fireEvent.blur(title);
+    await act(async () => rejectAssignment(new Error("Wait for pending board invitations")));
+    expect(await screen.findByText("Wait for pending board invitations")).toBeTruthy();
+    await waitFor(() => expect(update).toHaveBeenLastCalledWith("one", { title: "New title" }));
+    expect(update).toHaveBeenCalledTimes(2);
+  });
   it("explains approval conflicts while retaining the edited draft",async()=>{
     const update=vi.fn().mockRejectedValue(new Error("Approval required before completion. Request review first."));
     render(<CardDetailDialog card={card} columns={[]} members={[]} open onOpenChange={vi.fn()} onUpdate={update} onDelete={vi.fn()}/>);

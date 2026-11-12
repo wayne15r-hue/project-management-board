@@ -20,7 +20,6 @@ import {
   Pencil,
   Trash2,
   Settings,
-  Share2,
   Palette,
   Check,
   Upload,
@@ -31,6 +30,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { WorkflowSettingsDialog } from "./workflow-settings-dialog";
+import { BoardShareDialog } from "./board-share-dialog";
 import { ImportCardsDialog } from "./import-cards-dialog";
 import { BoardSummaryDialog } from "@/components/ai/board-summary-dialog";
 import { ImportNotesDialog } from "@/components/ai/import-notes-dialog";
@@ -39,13 +39,16 @@ import { toast } from "sonner";
 import { ViewControls } from "./view-controls";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BOARD_THEMES } from "@/lib/board-themes";
-import type { BoardBackground, BoardWithDetails, Profile } from "@/types";
+import { useDashboardUserId } from "@/components/shared/auth-session-boundary";
+import type { BoardBackground, BoardSharing, BoardWithDetails, Profile } from "@/types";
 
 type BoardView = "kanban" | "table" | "timeline" | "calendar" | "analytics";
 
 interface BoardHeaderProps {
   board: BoardWithDetails;
   members: Profile[];
+  filterMembers?: Profile[];
+  sharing?: BoardSharing;
   activeView: BoardView;
   onViewChange: (view: BoardView) => void;
   presence?: { id: string; name: string; avatar_url: string | null }[];
@@ -59,8 +62,9 @@ const views = [
   { id: "analytics" as const, label: "Analytics", icon: BarChart3 },
 ];
 
-export function BoardHeader({ board, members, activeView, onViewChange, presence = [] }: BoardHeaderProps) {
+export function BoardHeader({ board, members, filterMembers = members, sharing, activeView, onViewChange, presence = [] }: BoardHeaderProps) {
   const router = useRouter();
+  const userId = useDashboardUserId();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(board.name);
@@ -93,7 +97,7 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
   }
 
   async function handleSetTheme(theme: BoardBackground) {
-    const key = ["board", board.id];
+    const key = ["board", board.id, userId];
     const previous = queryClient.getQueryData<BoardWithDetails>(key);
     queryClient.setQueryData<BoardWithDetails>(key, current => current ? { ...current, background_theme: theme } : current);
     try {
@@ -251,13 +255,7 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
               </div>
             </PopoverContent>
           </Popover>
-          <button
-            type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            Share
-          </button>
+          <BoardShareDialog key={board.id} boardId={board.id} sharing={sharing} />
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
               <MoreHorizontal className="h-4 w-4" />
@@ -300,6 +298,12 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
         </div>
       </div>
 
+      {board.assignmentsLocked && (
+        <p role="status" className="text-sm text-muted-foreground">
+          New assignments are paused while board invitations are pending.
+        </p>
+      )}
+
       {/* Tabs + controls row */}
       <div className="flex items-center justify-between -mb-px">
         <div className="flex items-center gap-0.5">
@@ -323,7 +327,7 @@ export function BoardHeader({ board, members, activeView, onViewChange, presence
           ))}
         </div>
 
-        <ViewControls board={board} members={members} />
+        <ViewControls board={board} members={filterMembers} />
       </div>
 
       {owner&&workflowOpen&&<WorkflowSettingsDialog boardId={board.id} open={workflowOpen} onOpenChange={setWorkflowOpen}/>}

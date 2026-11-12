@@ -43,7 +43,7 @@ import { Tag } from "lucide-react";
 import { AIWritingAssistant } from "@/components/ai/ai-writing-assistant";
 import { AISuggestions } from "@/components/ai/ai-suggestions";
 import type {
-  Board,
+  BoardWithDetails,
   Card,
   Column,
   Profile,
@@ -55,7 +55,7 @@ import type {
 
 interface CardDetailDialogProps {
   card: Card | null;
-  board?: Board | null;
+  board?: Pick<BoardWithDetails, "name" | "assignmentsLocked"> | null;
   columns: Column[];
   members: Profile[];
   customFields?: CustomFieldDefinition[];
@@ -112,6 +112,8 @@ export function CardDetailDialog({
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [assigneeId, setAssigneeId] = useState<string>("");
+  const [savingAssignee, setSavingAssignee] = useState(false);
+  const [assigneeError, setAssigneeError] = useState("");
   const [cardLabels, setCardLabels] = useState<Label[]>([]);
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(null);
   const [coverColor, setCoverColor] = useState<string | null>(null);
@@ -127,7 +129,8 @@ export function CardDetailDialog({
   const lastCardId = useRef<string | null>(null);
   const failedUpdates = useRef<Partial<Card>>({});
   const saveSequence = useRef(0);
-  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const assigneeRequest = useRef<Promise<boolean> | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveLifetime = useRef({ active: true });
@@ -150,6 +153,9 @@ export function CardDetailDialog({
       setDueDate(card.due_date ? new Date(card.due_date) : undefined);
       setStartDate(card.start_date ? new Date(card.start_date) : undefined);
       setAssigneeId(card.assignee_id || "");
+      assigneeRequest.current = null;
+      setSavingAssignee(false);
+      setAssigneeError("");
       setRecurrenceRule(card.recurrence_rule || null);
       setCoverColor(card.cover_color || null);
       setIsBlocked(card.is_blocked ?? false);
@@ -250,7 +256,9 @@ export function CardDetailDialog({
   if (!card) return null;
 
   const currentColumn = columns.find((c) => c.id === columnId);
-  const currentAssignee = members.find((m) => m.id === assigneeId);
+  const currentAssignee = members.find((m) => m.id === assigneeId)
+    ?? (card.assignee?.id === assigneeId ? card.assignee : null);
+  const assignableMembers = board?.assignmentsLocked || savingAssignee ? [] : members;
   const priorityMeta = PRIORITY_META[priority];
 
   function commitTitle() {
@@ -274,9 +282,39 @@ export function CardDetailDialog({
     setPriority(p);
     performSave({ priority: p });
   }
-  function changeAssignee(id: string) {
-    setAssigneeId(id);
-    performSave({ assignee_id: id || null });
+  async function changeAssignee(id: string) {
+    if (assigneeRequest.current || id === assigneeId ||
+      (id && !assignableMembers.some((member) => member.id === id))) return false;
+    const cardId = card!.id;
+    const boardId = card!.board_id;
+    const lifetime = saveLifetime.current;
+    setSavingAssignee(true);
+    setAssigneeError("");
+    const request: Promise<boolean> = saveQueue.current.then(async () => {
+      const isCurrent = () => lifetime.active && assigneeRequest.current === request && lastCardId.current === cardId;
+      if (!isCurrent()) return false;
+      try {
+        await onUpdate(cardId, { assignee_id: id || null });
+        if (!isCurrent()) return false;
+        setAssigneeId(id);
+        void queryClient.invalidateQueries({ queryKey: ["approval", cardId] });
+        return true;
+      } catch (error) {
+        if (isCurrent()) {
+          setAssigneeError(error instanceof Error ? error.message : "Unable to update assignee");
+          void queryClient.invalidateQueries({ queryKey: ["board-sharing", boardId] });
+        }
+        return false;
+      } finally {
+        if (isCurrent()) {
+          assigneeRequest.current = null;
+          setSavingAssignee(false);
+        }
+      }
+    });
+    assigneeRequest.current = request;
+    saveQueue.current = request;
+    return request;
   }
   function changeStartDate(d: Date | undefined) {
     setStartDate(d);
@@ -348,15 +386,12 @@ export function CardDetailDialog({
                 currentPriority={priority}
                 currentLabels={cardLabels}
                 currentAssigneeId={assigneeId || null}
-                members={members}
+                members={assignableMembers}
                 onApplyPriority={(p) => {
                   setPriority(p);
                   performSave({ priority: p });
                 }}
-                onApplyAssignee={(id) => {
-                  setAssigneeId(id);
-                  performSave({ assignee_id: id });
-                }}
+                onApplyAssignee={changeAssignee}
                 onApplyLabel={(l) => setCardLabels((prev) => [...prev, l])}
               />
             </div>
@@ -450,7 +485,7 @@ export function CardDetailDialog({
 
             <PropertyRow icon={<User className="h-3.5 w-3.5" />} label="Assignee">
               <Popover>
-                <PopoverTrigger className="inline-flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] hover:bg-accent">
+                <PopoverTrigger disabled={savingAssignee} className="inline-flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] hover:bg-accent">
                   {currentAssignee ? (
                     <>
                       <Avatar className="h-5 w-5">
@@ -470,8 +505,14 @@ export function CardDetailDialog({
                   )}
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-64 p-1">
+                  {board?.assignmentsLocked && (
+                    <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                      New assignments are paused while board invitations are pending.
+                    </p>
+                  )}
                   <button
                     type="button"
+                    disabled={savingAssignee}
                     onClick={() => changeAssignee("")}
                     className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent"
                   >
@@ -481,7 +522,7 @@ export function CardDetailDialog({
                     <span className="flex-1 text-muted-foreground">No assignee</span>
                     {!assigneeId && <Check className="h-3.5 w-3.5" />}
                   </button>
-                  {members.map((m) => (
+                  {assignableMembers.map((m) => (
                     <button
                       key={m.id}
                       type="button"
@@ -501,6 +542,8 @@ export function CardDetailDialog({
                   ))}
                 </PopoverContent>
               </Popover>
+              {savingAssignee && <span role="status" className="text-xs text-muted-foreground">Saving assignee…</span>}
+              {assigneeError && <span role="alert" className="text-xs text-destructive">{assigneeError}</span>}
             </PropertyRow>
 
             <PropertyRow icon={<Tag className="h-3.5 w-3.5" />} label="Labels">

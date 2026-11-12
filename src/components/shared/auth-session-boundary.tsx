@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+const DashboardUserContext = createContext<string | null>(null);
+
+export function useDashboardUserId() {
+  return useContext(DashboardUserContext);
+}
 
 /** Unmount private state immediately; refresh the server identity before reuse. */
 export function AuthSessionBoundary({ userId, children }: { userId: string; children: React.ReactNode }) {
@@ -19,5 +25,5 @@ export function AuthSessionBoundary({ userId, children }: { userId: string; chil
     return () => subscription.unsubscribe();
   }, [userId, router]);
   if (stale) return <div role="status" className="p-6 text-sm text-muted-foreground">Updating your session…</div>;
-  return children;
+  return <DashboardUserContext.Provider value={userId}>{children}</DashboardUserContext.Provider>;
 }
