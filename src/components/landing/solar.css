@@ -185,6 +185,15 @@
 .solar-hero .solar-eclipse {
   z-index: -2;
 }
+.solar-hero-fibers {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .56;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse 57% 64% at 75% 49%, transparent 18%, #000 56%, transparent 100%);
+}
 .solar-hero-copy h1 {
   margin: 0 0 24px;
   max-width: min(100%, 645px);
@@ -1170,6 +1179,10 @@
   }
   .solar-hero::after {
     background: linear-gradient(0deg, var(--solar-bg) 34%, #080d1980 52%, transparent 69%);
+  }
+  .solar-hero-fibers {
+    opacity: .43;
+    mask-image: radial-gradient(ellipse 64% 34% at 50% 24%, transparent 18%, #000 60%, transparent 100%);
   }
 }
 @media (max-width: 480px) {

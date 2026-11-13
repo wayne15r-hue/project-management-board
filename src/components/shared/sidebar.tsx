@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { Dialog } from "@base-ui/react/dialog";
 import { BrandMark } from "./brand-logo";
+import { BranchedMenu, MenuBranch } from "@/components/react-bits/BranchedMenu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,6 +139,40 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
     ? `${userName.split(" ")[0]}'s Workspace`
     : "My Workspace";
 
+  const workspaceLinks = [
+    { href: "/dashboard/my-work", label: "My Work", icon: ClipboardList },
+    { href: "/dashboard", label: "All Boards", icon: LayoutGrid },
+    { href: "/dashboard/service-desk", label: "Service Desk", icon: Ticket },
+    { href: "/dashboard/leave-desk", label: "LeaveDesk", icon: CalendarDays },
+    { href: "/dashboard/chat", label: "Chat", icon: MessageSquare, badge: <ChatNavBadge collapsed={collapsed} /> },
+  ];
+  const settingsLinks = [
+    ...(isEmployeeAdmin ? [{ href: "/dashboard/admin", label: "Admin", icon: ShieldCheck }] : []),
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  ];
+  const primaryLinks = [...workspaceLinks, ...settingsLinks].map(({ href, label, icon: Icon, ...props }) => (
+    <SidebarLink
+      key={href}
+      href={href}
+      active={pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))}
+      icon={<Icon className="size-4" />}
+      label={label}
+      collapsed={collapsed}
+      {...props}
+    />
+  ));
+  const boardLinks = (collapsed ? boards.slice(0, 8) : boards).map((board) => (
+    <SidebarLink
+      key={board.id}
+      href={`/dashboard/board/${board.id}`}
+      active={pathname === `/dashboard/board/${board.id}`}
+      label={board.name}
+      icon={<BoardDot id={board.id} />}
+      board
+      collapsed={collapsed}
+    />
+  ));
+
   const content = (
     <>
         <div
@@ -176,112 +211,29 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
                 event.target instanceof Element && event.target.closest("a")) setMobileOpen(false);
           }}
         >
-          <div className="space-y-0.5">
-            <SidebarLink
-              href="/dashboard/my-work"
-              active={pathname.startsWith("/dashboard/my-work")}
-              icon={<ClipboardList className="h-4 w-4" />}
-              label="My Work"
-              collapsed={collapsed}
-            />
-            <SidebarLink
-              href="/dashboard"
-              active={pathname === "/dashboard"}
-              icon={<LayoutGrid className="h-4 w-4" />}
-              label="All Boards"
-              collapsed={collapsed}
-            />
-            <SidebarLink
-              href="/dashboard/service-desk"
-              active={pathname.startsWith("/dashboard/service-desk")}
-              icon={<Ticket className="h-4 w-4" />}
-              label="Service Desk"
-              collapsed={collapsed}
-            />
-            <SidebarLink
-              href="/dashboard/leave-desk"
-              active={pathname.startsWith("/dashboard/leave-desk")}
-              icon={<CalendarDays className="h-4 w-4" />}
-              label="LeaveDesk"
-              collapsed={collapsed}
-            />
-            <SidebarLink
-              href="/dashboard/chat"
-              active={pathname.startsWith("/dashboard/chat")}
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Chat"
-              collapsed={collapsed}
-              badge={<ChatNavBadge collapsed={collapsed} />}
-            />
-            {isEmployeeAdmin && <SidebarLink href="/dashboard/admin" active={pathname.startsWith('/dashboard/admin')} icon={<ShieldCheck className="h-4 w-4" />} label="Admin" collapsed={collapsed} />}
-          </div>
-
-          {/* Separator */}
-          <div className="my-4 h-px bg-sidebar-border" />
-
-          {/* Boards section */}
-          {!collapsed && (
-            <div>
-              <div className="flex items-center justify-between gap-2 px-2 pb-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Boards
-                </span>
-                <Link
-                  href="/dashboard?new=true"
-                  className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-sidebar-border px-2 text-xs font-medium text-sidebar-primary hover:bg-sidebar-accent"
-                >
-                  <Plus className="size-3.5" aria-hidden="true" /> New board
-                </Link>
-              </div>
-              <div className="space-y-0.5">
-                {boards.map((board) => (
-                  <SidebarLink
-                    key={board.id}
-                    href={`/dashboard/board/${board.id}`}
-                    active={pathname === `/dashboard/board/${board.id}`}
-                    label={board.name}
-                    icon={<BoardDot id={board.id} />}
-                    board
-                    collapsed={false}
-                  />
-                ))}
-                {boards.length === 0 && (
-                  <p className="px-2 py-1 text-[13px] text-muted-foreground">
-                    No boards yet
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {collapsed && (
+          {collapsed ? (
             <div className="space-y-0.5">
+              {primaryLinks}
+              <div className="my-3 h-px bg-sidebar-border" />
               <SidebarLink href="/dashboard?new=true" active={false} label="New board" icon={<Plus className="size-4" />} collapsed />
-              {boards.slice(0, 8).map((board) => (
-                <SidebarLink
-                  key={board.id}
-                  href={`/dashboard/board/${board.id}`}
-                  active={pathname === `/dashboard/board/${board.id}`}
-                  label={board.name}
-                  icon={<BoardDot id={board.id} />}
-                  collapsed
-                />
-              ))}
+              {boardLinks}
             </div>
+          ) : (
+            <BranchedMenu>
+              <MenuBranch label="Workspace">{primaryLinks.slice(0, workspaceLinks.length)}</MenuBranch>
+              <MenuBranch
+                label="Boards"
+                action={
+                  <Link href="/dashboard?new=true" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-sidebar-border px-2 text-xs font-medium text-sidebar-primary hover:bg-sidebar-accent">
+                    <Plus className="size-3.5" aria-hidden="true" /> New board
+                  </Link>
+                }
+              >
+                {boardLinks.length ? boardLinks : <p className="px-3 py-2 text-[13px] text-muted-foreground">No boards yet</p>}
+              </MenuBranch>
+              <MenuBranch label="Management">{primaryLinks.slice(workspaceLinks.length)}</MenuBranch>
+            </BranchedMenu>
           )}
-
-          <div className="my-4 h-px bg-sidebar-border" />
-
-          {/* Settings section */}
-          <div className="space-y-0.5">
-            <SidebarLink
-              href="/dashboard/settings"
-              active={pathname === "/dashboard/settings"}
-              icon={<Settings className="h-4 w-4" />}
-              label="Settings"
-              collapsed={collapsed}
-            />
-          </div>
         </nav>
 
         {/* User footer */}

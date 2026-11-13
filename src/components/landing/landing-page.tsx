@@ -5,7 +5,7 @@ import { SolarEclipse } from "@/components/shared/solar-eclipse";
 import { BRAND } from "@/lib/brand";
 import { CHAPTERS, ProductPreview } from "./product-preview";
 import { Showcase } from "./showcase";
-import { SolarEclipseVideo, SolarMotion } from "./solar-motion";
+import { SolarEclipseVideo, SolarHeroFibers, SolarMotion } from "./solar-motion";
 import "./solar.css";
 
 const FAQ = [
@@ -92,6 +92,7 @@ export function LandingPage() {
           aria-labelledby="hero-heading"
         >
           <SolarEclipse animation={<SolarEclipseVideo />} />
+          <SolarHeroFibers />
           <div className="solar-container solar-hero-copy">
             <h1 id="hero-heading">
               Bring your team’s{" "}<span className="solar-hero-heading-line">work <span>into focus.</span></span>

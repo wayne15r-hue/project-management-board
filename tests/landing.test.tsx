@@ -6,6 +6,7 @@ import { LandingPage } from "@/components/landing/landing-page";
 
 beforeEach(() => {
   localStorage.clear();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   vi.stubGlobal("matchMedia", () => ({
     matches: false,
@@ -27,6 +28,7 @@ it("offers a footer motion preference that survives remounting", () => {
   expect(screen.queryByRole("button", { name: /pause animation/i })).toBeNull();
   const video = first.container.querySelector("video")!;
   expect(video.loop && video.muted).toBe(true);
+  expect(first.container.querySelector(".solar-hero .ghost-fibers-canvas")).toBeTruthy();
   expect(video.dataset.playing).toBe("false");
   fireEvent.playing(video);
   expect(video.dataset.playing).toBe("true");
@@ -35,6 +37,7 @@ it("offers a footer motion preference that survives remounting", () => {
   fireEvent.click(setting);
   expect(first.container.querySelector(".solar-page")?.getAttribute("data-reduced-motion")).toBe("true");
   expect(first.container.querySelector("video")).toBeNull();
+  expect(first.container.querySelector(".ghost-fibers-canvas")).toBeNull();
   first.unmount();
   render(<LandingPage />);
   expect((screen.getByRole("checkbox", { name: "Reduce motion" }) as HTMLInputElement).checked).toBe(true);
