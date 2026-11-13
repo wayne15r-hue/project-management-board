@@ -13,6 +13,7 @@
   overflow: clip;
   min-height: 100vh;
   background-image:
+    radial-gradient(ellipse at 75% 27%, #172442 0, transparent 46%),
     radial-gradient(circle at 8% 12%, #ffffff50 1px, transparent 1.5px),
     radial-gradient(circle at 83% 7%, #ffffff40 1px, transparent 1.5px),
     radial-gradient(circle at 91% 32%, #ffffff30 1px, transparent 1.5px);
@@ -165,12 +166,10 @@
 }
 .solar-hero {
   position: relative;
-  isolation: isolate;
   display: grid;
   align-items: center;
   min-height: clamp(570px, 75svh, 830px);
   padding-block: 75px;
-  background: #050609;
   border-bottom: 1px solid #ffffff18;
 }
 .solar-hero::after {
@@ -185,14 +184,14 @@
 .solar-hero .solar-eclipse {
   z-index: -2;
 }
-.solar-hero-fibers {
-  position: absolute;
+.solar-fibers {
+  position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: .56;
+  opacity: .6;
   mix-blend-mode: screen;
-  mask-image: radial-gradient(ellipse 57% 64% at 75% 49%, transparent 18%, #000 56%, transparent 100%);
+  mask-image: linear-gradient(0deg, transparent, #000 15%, #000 82%, transparent);
 }
 .solar-hero-copy h1 {
   margin: 0 0 24px;
@@ -273,10 +272,9 @@
   margin-top: 18px;
 }
 .solar-chapter {
-  --planet-light: #e4b398;
-  --planet-mid: #936457;
-  --planet-shadow: #2e1923;
-  --planet-glow: #ecab8260;
+  --planet-glow: #a1b0c560;
+  --planet-width: 212px;
+  --planet-center: 63%;
   --scene-travel: 0;
   --preview-travel: 25px;
   --planet-travel: 65px;
@@ -287,20 +285,30 @@
   padding: 90px 0;
   border-top: 1px solid #ffffff12;
 }
-.solar-chapter[data-solar-scene="1"] {
-  --planet-light: #f3d7aa; --planet-mid: #b07944; --planet-shadow: #342026; --planet-glow: #edb45f65;
+.solar-chapter[data-planet="venus"] {
+  --planet-width: 255px;
+  --planet-center: 43%;
+  --planet-glow: #edb45f65;
 }
-.solar-chapter[data-solar-scene="2"] {
-  --planet-light: #8eced8; --planet-mid: #296e95; --planet-shadow: #162747; --planet-glow: #54b0d578;
+.solar-chapter[data-planet="earth"] {
+  --planet-width: 286px;
+  --planet-center: 62%;
+  --planet-glow: #54b0d578;
 }
-.solar-chapter[data-solar-scene="3"] {
-  --planet-light: #f6ac79; --planet-mid: #b3513c; --planet-shadow: #301322; --planet-glow: #f2724d70;
+.solar-chapter[data-planet="mars"] {
+  --planet-width: 228px;
+  --planet-center: 38%;
+  --planet-glow: #f2724d70;
 }
-.solar-chapter[data-solar-scene="4"] {
-  --planet-light: #e9cbab; --planet-mid: #ad865e; --planet-shadow: #3b2731; --planet-glow: #f6c58b77;
+.solar-chapter[data-planet="jupiter"] {
+  --planet-width: 320px;
+  --planet-center: 57%;
+  --planet-glow: #f6c58b77;
 }
-.solar-chapter[data-solar-scene="5"] {
-  --planet-light: #b7aceb; --planet-mid: #6356aa; --planet-shadow: #211839; --planet-glow: #a08afa75;
+.solar-chapter[data-planet="saturn"] {
+  --planet-width: 460px;
+  --planet-center: 48%;
+  --planet-glow: #e0b97c75;
 }
 .solar-chapter-reverse .solar-chapter-copy {
   order: 2;
@@ -330,18 +338,15 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
-  padding-top: clamp(60px, 8vw, 115px);
 }
 .solar-planet-scene {
-  position: absolute;
-  inset: 0 0 auto;
-  height: clamp(150px, 21vw, 255px);
-  z-index: -1;
+  position: relative;
+  height: clamp(205px, 25vw, 335px);
   pointer-events: none;
 }
 .solar-planet-orbit {
   position: absolute;
-  inset: 17% 2% 32%;
+  inset: 24% 2% 23%;
   border: 1px solid var(--planet-glow);
   border-radius: 50%;
   transform: translateY(calc(var(--scene-travel) * var(--preview-travel))) rotate(calc(-12deg + var(--scene-travel) * 9deg));
@@ -349,22 +354,22 @@
 }
 .solar-planet {
   position: absolute;
-  left: 55%;
-  top: 0;
-  width: clamp(110px, 18vw, 210px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 72% 86%, var(--planet-shadow), transparent 70%),
-    radial-gradient(ellipse at 31% 23%, var(--planet-light), transparent 65%),
-    repeating-linear-gradient(155deg, transparent 0 9%, #0a0d1920 11%, transparent 16%),
-    var(--planet-mid);
-  box-shadow: inset -12px -20px 32px #070916d0, 0 0 42px -10px var(--planet-glow);
-  transform: translate(calc(-50% + var(--scene-travel) * var(--planet-travel)), calc(var(--scene-travel) * -20px));
+  left: var(--planet-center);
+  top: 48%;
+  width: min(var(--planet-width), 76%);
+  transform: translate(calc(-50% + var(--scene-travel) * var(--planet-travel)), calc(-50% - var(--scene-travel) * 20px));
+}
+.solar-planet img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 28px var(--planet-glow));
 }
 .solar-chapter-reverse .solar-planet {
-  left: 45%;
-  transform: translate(calc(-50% - var(--scene-travel) * var(--planet-travel)), calc(var(--scene-travel) * -20px));
+  transform: translate(calc(-50% - var(--scene-travel) * var(--planet-travel)), calc(-50% - var(--scene-travel) * 20px));
+}
+.solar-chapter[data-planet="saturn"] .solar-planet-orbit {
+  opacity: .45;
 }
 .solar-flight-preview {
   transform: translateY(calc(var(--scene-travel) * var(--preview-travel)));
@@ -1180,9 +1185,18 @@
   .solar-hero::after {
     background: linear-gradient(0deg, var(--solar-bg) 34%, #080d1980 52%, transparent 69%);
   }
-  .solar-hero-fibers {
+  .solar-fibers {
     opacity: .43;
-    mask-image: radial-gradient(ellipse 64% 34% at 50% 24%, transparent 18%, #000 60%, transparent 100%);
+  }
+  .solar-planet-scene {
+    height: clamp(205px, 57vw, 285px);
+  }
+  .solar-planet {
+    left: 50%;
+    width: min(var(--planet-width), 57%);
+  }
+  .solar-chapter[data-planet="saturn"] .solar-planet {
+    width: min(var(--planet-width), 86%);
   }
 }
 @media (max-width: 480px) {
@@ -1300,7 +1314,7 @@
     --planet-travel: 0px;
   }
   .solar-planet-orbit { transform: rotate(-12deg); }
-  .solar-planet, .solar-chapter-reverse .solar-planet { transform: translateX(-50%); }
+  .solar-planet, .solar-chapter-reverse .solar-planet { transform: translate(-50%, -50%); }
   .solar-page *,
   .solar-page *::before,
   .solar-page *::after {

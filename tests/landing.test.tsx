@@ -28,7 +28,8 @@ it("offers a footer motion preference that survives remounting", () => {
   expect(screen.queryByRole("button", { name: /pause animation/i })).toBeNull();
   const video = first.container.querySelector("video")!;
   expect(video.loop && video.muted).toBe(true);
-  expect(first.container.querySelector(".solar-hero .ghost-fibers-canvas")).toBeTruthy();
+  expect(first.container.querySelectorAll(".solar-page > .solar-fibers .ghost-fibers-canvas")).toHaveLength(1);
+  expect(first.container.querySelector(".solar-hero .ghost-fibers-canvas")).toBeNull();
   expect(video.dataset.playing).toBe("false");
   fireEvent.playing(video);
   expect(video.dataset.playing).toBe("true");
@@ -98,6 +99,9 @@ it("renders all six sample panels, real CTAs and content on the server without J
   expect(doc.querySelectorAll("[data-sample-panel]").length).toBe(6);
   expect(doc.querySelectorAll("[data-sample-panel][hidden]").length).toBe(0);
   expect(doc.querySelectorAll("[data-solar-scene]").length).toBe(6);
+  expect([...doc.querySelectorAll(".solar-planet img")].map((planet) => planet.getAttribute("src"))).toEqual(
+    ["mercury", "venus", "earth", "mars", "jupiter", "saturn"].map((planet) => `/landing/planets/${planet}.webp`),
+  );
   expect(doc.querySelector(".solar-page")?.hasAttribute("data-reduced-motion")).toBe(false);
   expect(doc.querySelector('img[src="/landing/eclipse.webp"]')?.getAttribute("alt")).toBe("");
   expect(doc.querySelector("video")).toBeNull();

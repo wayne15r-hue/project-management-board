@@ -81,6 +81,7 @@ export function SolarMotion({ children, footer }: { children: React.ReactNode; f
 
   return (
     <div ref={root} className="solar-page" data-reduced-motion={ready ? reduced : undefined}>
+      {ready && !reduced && <SolarFibers />}
       <AmbientMotion.Provider value={ready && !reduced}>{children}</AmbientMotion.Provider>
       <footer className="solar-footer solar-container">
         {footer}
@@ -115,16 +116,14 @@ export function SolarEclipseVideo() {
   return enabled ? <EclipseLoop /> : null;
 }
 
-export function SolarHeroFibers() {
-  const enabled = useContext(AmbientMotion);
-  if (!enabled) return null;
+function SolarFibers() {
   return (
-    <div className="solar-hero-fibers" aria-hidden="true">
+    <div className="solar-fibers" aria-hidden="true">
       <GhostFibers
         glowColor="#597fc7"
         lineColor="#7197de"
         secondaryColor="#e8a35e"
-        speed={0.3}
+        speed={0.27}
         layers={2}
         threads={44}
         dpr={1}

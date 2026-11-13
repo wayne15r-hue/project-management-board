@@ -1,12 +1,22 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowDown, ArrowRight, Check, ShieldCheck, Sun } from "lucide-react";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { SolarEclipse } from "@/components/shared/solar-eclipse";
 import { BRAND } from "@/lib/brand";
 import { CHAPTERS, ProductPreview } from "./product-preview";
 import { Showcase } from "./showcase";
-import { SolarEclipseVideo, SolarHeroFibers, SolarMotion } from "./solar-motion";
+import { SolarEclipseVideo, SolarMotion } from "./solar-motion";
 import "./solar.css";
+
+const PLANETS = [
+  { name: "Mercury", file: "mercury", width: 376, height: 381 },
+  { name: "Venus", file: "venus", width: 428, height: 431 },
+  { name: "Earth", file: "earth", width: 466, height: 427 },
+  { name: "Mars", file: "mars", width: 419, height: 427 },
+  { name: "Jupiter", file: "jupiter", width: 479, height: 482 },
+  { name: "Saturn", file: "saturn", width: 593, height: 343 },
+] as const;
 
 const FAQ = [
   [
@@ -92,7 +102,6 @@ export function LandingPage() {
           aria-labelledby="hero-heading"
         >
           <SolarEclipse animation={<SolarEclipseVideo />} />
-          <SolarHeroFibers />
           <div className="solar-container solar-hero-copy">
             <h1 id="hero-heading">
               Bring your team’s{" "}<span className="solar-hero-heading-line">work <span>into focus.</span></span>
@@ -129,30 +138,43 @@ export function LandingPage() {
           </Showcase>
         </section>
         <div id="journey" className="solar-chapters solar-container">
-          {CHAPTERS.map((chapter, index) => (
-            <section
-              key={chapter.label}
-              className={`solar-chapter ${index % 2 ? "solar-chapter-reverse" : ""}`}
-              data-solar-scene={index}
-              aria-labelledby={`chapter-${index}`}
-            >
-              <div className="solar-chapter-copy">
-                <p className="solar-eyebrow">{chapter.label}</p>
-                <h2 id={`chapter-${index}`}>{chapter.title}</h2>
-                <p>{chapter.description}</p>
-                <div className="solar-chapter-detail">{chapter.detail}</div>
-              </div>
-              <div className="solar-chapter-preview">
-                <div className="solar-planet-scene" aria-hidden="true">
-                  <div className="solar-planet-orbit" />
-                  <div className="solar-planet" />
+          {CHAPTERS.map((chapter, index) => {
+            const planet = PLANETS[index];
+            return (
+              <section
+                key={chapter.label}
+                className={`solar-chapter ${index % 2 ? "solar-chapter-reverse" : ""}`}
+                data-solar-scene={index}
+                data-planet={planet.file}
+                aria-labelledby={`chapter-${index}`}
+              >
+                <div className="solar-chapter-copy">
+                  <p className="solar-eyebrow">{planet.name} <span aria-hidden="true">·</span> {chapter.label}</p>
+                  <h2 id={`chapter-${index}`}>{chapter.title}</h2>
+                  <p>{chapter.description}</p>
+                  <div className="solar-chapter-detail">{chapter.detail}</div>
                 </div>
-                <div className="solar-flight-preview">
-                  <ProductPreview index={index} compact />
+                <div className="solar-chapter-preview">
+                  <div className="solar-planet-scene" aria-hidden="true">
+                    <div className="solar-planet-orbit" />
+                    <div className="solar-planet">
+                      <Image
+                        src={`/landing/planets/${planet.file}.webp`}
+                        width={planet.width}
+                        height={planet.height}
+                        loading="lazy"
+                        unoptimized
+                        alt=""
+                      />
+                    </div>
+                  </div>
+                  <div className="solar-flight-preview">
+                    <ProductPreview index={index} compact />
+                  </div>
                 </div>
-              </div>
-            </section>
-          ))}
+              </section>
+            );
+          })}
         </div>
         <section id="how-it-works" className="solar-section solar-how">
           <div className="solar-container">
