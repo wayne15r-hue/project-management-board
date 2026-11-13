@@ -18,6 +18,31 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+it("exposes the grid card as a board link with an independent favorite control", async () => {
+  render(<BoardList boards={boards} userId="owner" />);
+  const link = screen.getByRole("link", { name: "QA Board" });
+  const favorite = screen.getByRole("button", { name: "Favorite" });
+
+  expect(link.getAttribute("href")).toBe("/dashboard/board/board");
+  expect(link.contains(favorite)).toBe(false);
+  nav.push.mockClear();
+  fireEvent.click(favorite);
+
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+    "/api/boards/favorites",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ boardId: "board", favorite: true }) }),
+  ));
+  expect(nav.push).not.toHaveBeenCalled();
+});
+
+it("opens the existing template chooser from the first-board empty state", async () => {
+  const { container } = render(<BoardList boards={[]} userId="owner" />);
+  expect(screen.getByRole("heading", { name: "Create your first board" })).toBeTruthy();
+  expect(container.querySelector('img[src="/illustrations/first-board.webp"]')?.getAttribute("alt")).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: "New board" }));
+  await screen.findByRole("heading", { name: "Choose a template" });
+});
+
 it("opens sidebar-requested creation on client navigation and consumes only new when closed", async () => {
   const view = render(<BoardList boards={boards} userId="owner" />);
   nav.params = new URLSearchParams("new=true&keep=yes");

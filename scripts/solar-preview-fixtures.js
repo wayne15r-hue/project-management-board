@@ -4,6 +4,7 @@ const other={...user,id:'00000000-0000-4000-8000-000000000002',full_name:'Alex T
 export const fixture={incoming:false};
 const now=new Date().toISOString();
 export const boards=[{id:'10000000-0000-4000-8000-000000000001',name:'Operations',description:'Weekly work and decisions',owner_id:user.id,created_at:now,updated_at:now,color:'#9a5704',icon:null,cover_url:null}];
+const favorites = new Set();
 export const call={id:'call',conversation_id:'conversation',title:'Operations catch-up',kind:'group',caller_id:other.id,caller_name:other.full_name,state:'active',initialMode:'video',created_at:now,started_at:now,ended_at:null,end_reason:null,current_user_is_admin:true,participants:[user,other,{...other,id:'morgan',full_name:'Morgan Lee'},{...other,id:'sam',full_name:'Sam Kim'}].map((p,i)=>({user_id:p.id,media_identity:i===0?'local':p.id,display_name:p.full_name,state:'joined',blocked:false,heartbeat_at:now}))};
 const conversation={id:'conversation',type:'group',name:'Operations team',created_by:user.id,created_at:now,updated_at:now,last_message_at:now,board_id:null,members:[user,other],last_message:{content:'Shall we walk through the handover?',message_type:'text',sender_id:other.id},unread_count:2,current_user_is_admin:true};
 const messages=[{id:'message-1',conversation_id:'conversation',sender_id:other.id,content:'Morning! I’ve updated the weekly handover. Shall we walk through it together?',message_type:'text',file_url:null,file_name:null,file_size:null,file_type:null,reply_to_id:null,edited_at:null,created_at:now,sender:other,reactions:[]},{id:'message-2',conversation_id:'conversation',sender_id:user.id,content:'Thanks, Alex. I’ll check the open items before our catch-up.',message_type:'text',file_url:null,file_name:null,file_size:null,file_type:null,reply_to_id:null,edited_at:null,created_at:now,sender:user,reactions:[]}];
@@ -33,8 +34,14 @@ window.fetch=async(input,init)=>{
  else if(url.pathname==='/api/service-desk/teams')value={teams:[team]};
  else if(url.pathname.startsWith('/api/service-desk/tickets'))value={items:[],total:0,pageSize:25,counts:{mine:0,queue:0,reviews:0,assigned:0}};
  else if(url.pathname.startsWith('/api/leave-desk/')){const endpoint=url.pathname.split('/').at(-1);value=endpoint==='context'?leaveContext:endpoint==='balances'?balances:endpoint==='calendar'?{events:[],holidays:[],warnings:[]}:endpoint==='insights'?{balances,people_away:[],overlaps:[],pending_count:0,average_wait_days:0,monthly:[],unresolved_ncns:0}:[];}
- else if(url.pathname.includes('favorites'))value=[];
- if(method!=='GET'&&!['/api/calls'].includes(url.pathname)&&!url.pathname.endsWith('/name')&&!url.pathname.includes('/token')&&!url.pathname.endsWith('/read'))return new Response(JSON.stringify({error:'This local review does not submit real work.'}),{status:503});
+ else if(url.pathname==='/api/boards/favorites'){
+  if(method==='POST'){
+   if(body.favorite)favorites.add(body.boardId);
+   else favorites.delete(body.boardId);
+  }
+  value={boardIds:[...favorites]};
+ }
+ if(method!=='GET'&&!['/api/calls','/api/boards/favorites'].includes(url.pathname)&&!url.pathname.endsWith('/name')&&!url.pathname.includes('/token')&&!url.pathname.endsWith('/read'))return new Response(JSON.stringify({error:'This local review does not submit real work.'}),{status:503});
  return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});
 };
 export function createClient(){

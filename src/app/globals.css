@@ -119,6 +119,59 @@
 }
 
 .solar-auth-story { background: radial-gradient(ellipse at 15% 75%,var(--accent),transparent 70%),var(--card); }
+
+.board-grid-card::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 240px 160px at 50% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 100%);
+  content: "";
+  opacity: 0;
+}
+
+.board-grid-card:has(:focus-visible) {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+
+.board-grid-card:has(:focus-visible)::before {
+  opacity: 1;
+}
+
+@supports selector(:has(*)) {
+  .board-grid-card:has(.board-grid-card-link:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .board-grid-card-link:focus-visible {
+    outline: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-grid-card:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+
+  .board-grid-card:hover::before {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .board-grid-card:hover:not(:has(:focus-visible))::before {
+    background: radial-gradient(ellipse 240px 160px at var(--spotlight-x, 50%) var(--spotlight-y, 0%), color-mix(in srgb, var(--primary) 16%, transparent), transparent 100%);
+  }
+}
+
+@media (any-pointer: coarse) {
+  .board-grid-favorite {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 @media (pointer:coarse) {
   [data-slot="button"], [data-slot="dropdown-menu-item"] { min-height:44px; }
   [data-slot="button"][data-size^="icon"] { min-width:44px; }
