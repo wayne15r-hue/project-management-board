@@ -5,7 +5,7 @@ import { responseError } from "@/lib/response-error";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CalendarDays, CheckSquare, RefreshCw } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckSquare, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardDetailDialog } from "@/components/board/card-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
@@ -81,13 +81,13 @@ function MyWorkContent({userId}:{userId:string}) {
     ["Pending My Review",data?.counts.pendingMyReview??0,CheckSquare],
   ] as const;
   const sections=tab==="mine"?groups.map(([key,label])=>({label,items:data?.items.filter(item=>item.group===key)??[]})):[{label:"Needs Attention",items:data?.items??[]}];
-  return <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
-    <header className="mb-6 flex items-start justify-between gap-3 pl-12 pr-9 md:pl-0">
-      <div><h1 className="text-[28px] font-bold">My Work</h1><p className="mt-1 text-sm text-muted-foreground">Your next steps, across your boards.</p></div>
+  return <div className="mx-auto w-full max-w-6xl px-4 py-5 md:px-6 md:py-7">
+    <header className="workspace-page-intro mb-5 flex items-start justify-between gap-3">
+      <div><h1>My Work</h1><p className="mt-2 text-sm text-muted-foreground">Your next steps, across your boards.</p></div>
       <Button variant="outline" size="sm" aria-label="Refresh tasks" disabled={work.isFetching} onClick={()=>void work.refetch()}><RefreshCw className={cn("h-4 w-4",work.isFetching&&"animate-spin")} /><span className="hidden sm:inline">Refresh</span></Button>
     </header>
-    <div role="tablist" aria-label="Work lists" className="mb-5 flex gap-1 border-b border-border">
-      {([ ["mine","My Work"],["attention","Needs Attention"] ] as const).map(([value,label])=><button key={value} type="button" role="tab" id={`work-tab-${value}`} aria-selected={tab===value} tabIndex={tab===value?0:-1} aria-controls="work-panel" className={cn("border-b-2 px-4 py-3 text-sm",tab===value?"border-primary font-semibold":"border-transparent text-muted-foreground")} onClick={()=>{setTab(value);setPage(1);}} onKeyDown={event=>{
+    <div role="tablist" aria-label="Work lists" className="mb-4 inline-flex max-w-full flex-wrap gap-1 rounded-xl border bg-card p-1">
+      {([ ["mine","My Work"],["attention","Needs Attention"] ] as const).map(([value,label])=><button key={value} type="button" role="tab" id={`work-tab-${value}`} aria-selected={tab===value} tabIndex={tab===value?0:-1} aria-controls="work-panel" className={cn("min-h-10 rounded-lg px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring sm:px-4",tab===value?"bg-accent font-semibold text-accent-foreground":"text-muted-foreground hover:bg-muted hover:text-foreground")} onClick={()=>{setTab(value);setPage(1);}} onKeyDown={event=>{
         if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
         event.preventDefault();
         const next=event.key==="Home"?"mine":event.key==="End"?"attention":value==="mine"?"attention":"mine";
@@ -97,16 +97,32 @@ function MyWorkContent({userId}:{userId:string}) {
     </div>
     <div role="tabpanel" id="work-panel" aria-labelledby={`work-tab-${tab}`}>
       <p className="mb-4 text-sm text-muted-foreground">{tab==="mine"?"Open tasks assigned to you.":"Overdue or blocked tasks assigned to you or on boards you own, plus pending reviews assigned to you."}</p>
-      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
-        {countItems.map(([label,value,Icon])=><div key={label} className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4"/>{label}</div><p className="mt-2 text-2xl font-semibold">{work.isError?"—":value??"…"}</p></div>)}
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {countItems.map(([label,value,Icon])=><div key={label} className="rounded-2xl border border-border bg-card p-3.5"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="size-4 shrink-0 text-primary" aria-hidden="true"/>{label}</div><p className="mt-2 text-2xl font-semibold tabular-nums">{work.isError?"—":value??"…"}</p></div>)}
       </div>
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row">
-        <input aria-label="Search tasks" placeholder="Search task titles…" value={search} maxLength={200} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"/>
-        <select aria-label="Filter by board" value={board} onChange={e=>{setBoard(e.target.value);setPage(1);}} className="h-10 max-w-full rounded-md border border-input bg-background px-3 text-sm sm:max-w-64"><option value="">All boards</option>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select>
+      <div className="mb-5 flex flex-col gap-2 rounded-2xl border bg-card p-2 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" aria-hidden="true" />
+          <input aria-label="Search tasks" placeholder="Search task titles…" value={search} maxLength={200} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="h-11 w-full rounded-xl border border-input bg-background pr-3 pl-9 text-sm focus-visible:outline-2 focus-visible:outline-ring"/>
+        </div>
+        <select aria-label="Filter by board" value={board} onChange={e=>{setBoard(e.target.value);setPage(1);}} className="h-11 max-w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring sm:max-w-64"><option value="">All boards</option>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select>
       </div>
       {work.isPending&&<div role="status" className="rounded-xl border border-border p-8 text-sm text-muted-foreground">Loading your work…</div>}
       {work.isError?<div role="alert" className="rounded-xl border border-destructive/30 p-6"><p className="mb-3 text-sm">We couldn&apos;t load your work. Your tasks have not changed.</p><Button variant="outline" onClick={()=>void work.refetch()}>Retry</Button></div>:data&&<>
-        {data.total===0?<div className="rounded-xl border border-dashed border-border p-10 text-center"><CheckSquare className="mx-auto mb-3 h-7 w-7 text-muted-foreground"/><p className="font-medium">{search||board?"No matching tasks":tab==="attention"?"Nothing needs attention":"No open assignments"}</p><p className="mt-2 text-sm text-muted-foreground">{search||board?"Try another search or board.":tab==="attention"?"No overdue, blocked or pending review tasks in this view.":"Tasks assigned to you will appear here."}</p></div>:sections.filter(section=>section.items.length>0).map(section=><section key={section.label} className="mb-6"><h2 className="mb-3 text-sm font-semibold">{section.label}</h2><ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">{section.items.map(item=><WorkRow key={item.id} item={item} timezone={timezone} onOpen={()=>setSelected(item)}/>)}</ul></section>)}
+        {data.total===0 ? (
+          <div className="rounded-2xl border border-dashed bg-card p-8 text-center">
+            <div className="mx-auto mb-3 grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground"><CheckSquare className="size-5" aria-hidden="true" /></div>
+            <p className="font-semibold">{search||board?"No matching tasks":tab==="attention"?"Nothing needs attention":"No open assignments"}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{search||board?"Try another search or board.":tab==="attention"?"No overdue, blocked or pending review tasks in this view.":"Tasks assigned to you will appear here."}</p>
+          </div>
+        ) : sections.filter(section=>section.items.length>0).map(section=>(
+          <section key={section.label} className="mb-5 overflow-hidden rounded-2xl border bg-card">
+            <h2 className="border-b bg-muted/45 px-4 py-3 text-sm font-semibold">{section.label}</h2>
+            <ul className="divide-y divide-border">
+              {section.items.map(item=><WorkRow key={item.id} item={item} timezone={timezone} onOpen={()=>setSelected(item)}/>)}
+            </ul>
+          </section>
+        ))}
         {data.total>0&&<div className="flex flex-wrap items-center justify-between gap-3 text-sm"><p className="text-muted-foreground">{(page-1)*50+1}–{Math.min(page*50,data.total)} of {data.total} tasks</p><div className="flex items-center gap-2"><Button variant="outline" size="sm" aria-label="Previous page" disabled={page===1||work.isFetching} onClick={()=>setPage(p=>p-1)}>Previous</Button><span>Page {page}</span><Button variant="outline" size="sm" aria-label="Next page" disabled={page*50>=data.total||work.isFetching} onClick={()=>setPage(p=>p+1)}>Next</Button></div></div>}
       </>}
     </div>

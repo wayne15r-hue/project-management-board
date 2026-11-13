@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FloatingInput } from "@/components/auth/floating-input";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Mail } from "lucide-react";
 import { internalRedirect } from "../redirect";
 
 export default function LoginPage() {
@@ -22,6 +23,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const emailInput = useRef<HTMLInputElement>(null);
   const authError = searchParams.get("error") === "auth";
   const router = useRouter();
   const supabase = createClient();
@@ -66,14 +68,24 @@ function LoginForm() {
     }
   }
 
+  function changeEmail() {
+    flushSync(() => {
+      setStep(1);
+      setPassword("");
+      setShowPassword(false);
+      setError(null);
+    });
+    emailInput.current?.focus();
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-[26px] font-bold leading-tight text-foreground">
-          {step === 1 ? 'Find your focus.' : 'You’re almost there.'}
+          Sign in to Helios
         </h1>
-        <p className="mt-1.5 text-[13px] text-muted-foreground">
-          {step === 1 ? 'Sign in to your Helios workspace.' : 'Enter your password to continue.'}
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {step === 1 ? 'Enter your work email to continue.' : 'Enter your password to continue.'}
         </p>
       </div>
 
@@ -88,6 +100,7 @@ function LoginForm() {
         <div className={step === 2 ? 'sr-only' : ''}>
         <FloatingInput
           label="Email"
+          ref={emailInput}
           type="email"
           name="email"
           autoComplete="username"
@@ -99,9 +112,9 @@ function LoginForm() {
         />
         </div>
         {step === 2 && <>
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
-          <span className="min-w-0 break-all">{email}</span>
-          <Button type="button" variant="ghost" disabled={loading} onClick={()=>{setStep(1);setPassword('');setShowPassword(false);setError(null);}}>Change email</Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/55 px-3 py-2 text-sm">
+          <span className="inline-flex min-w-0 items-center gap-2 break-all"><Mail className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />{email}</span>
+          <Button type="button" variant="ghost" disabled={loading} onClick={changeEmail}>Change email</Button>
         </div>
         <div className="relative">
         <FloatingInput
@@ -132,6 +145,7 @@ function LoginForm() {
           type="submit"
           className="h-12 w-full"
           disabled={loading}
+          aria-busy={loading}
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {step === 1 ? <>Next <ArrowRight aria-hidden="true" /></> : 'Sign in'}
@@ -152,6 +166,7 @@ function LoginForm() {
             type="button"
             onClick={handleGoogle}
             disabled={googleLoading}
+            aria-busy={googleLoading}
             className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-background text-[14px] font-medium transition-colors hover:bg-accent disabled:opacity-60"
           >
             {googleLoading ? (

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, Check, ShieldCheck, Sun } from "lucide-react";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { SolarEclipse } from "@/components/shared/solar-eclipse";
 import { BRAND } from "@/lib/brand";
-import { EclipseHeroMedia } from "./eclipse-hero-media";
 import { CHAPTERS, ProductPreview } from "./product-preview";
 import { Showcase } from "./showcase";
+import { SolarEclipseVideo, SolarMotion } from "./solar-motion";
 import "./solar.css";
 
 const FAQ = [
@@ -44,9 +45,26 @@ function NavLinks() {
   );
 }
 
+function LandingFooter() {
+  return (
+    <>
+      <div>
+        <Link href="/" className="solar-brand"><BrandLogo /></Link>
+        <p>{BRAND.description}</p>
+      </div>
+      <nav aria-label="Footer navigation">
+        <a href="#product">Product</a>
+        <a href="#faq">FAQ</a>
+        <Link href="/login">Sign in</Link>
+      </nav>
+      <small>© {new Date().getFullYear()} {BRAND.name}</small>
+    </>
+  );
+}
+
 export function LandingPage() {
   return (
-    <div className="solar-page">
+    <SolarMotion footer={<LandingFooter />}>
       <a className="solar-skip" href="#main">
         Skip to content
       </a>
@@ -73,26 +91,22 @@ export function LandingPage() {
           className="solar-hero"
           aria-labelledby="hero-heading"
         >
-          <EclipseHeroMedia />
-          <div className="solar-hero-shade" aria-hidden="true" />
-          <div className="solar-container solar-hero-inner">
-            <div className="solar-hero-copy">
-              <h1 id="hero-heading">
-                <span>Bring your team’s</span>{" "}
-                <span>work <span>into focus.</span></span>
-              </h1>
-              <p className="solar-hero-description">
-                Plan projects, manage approvals and requests, track leave, and
-                collaborate in one connected workspace.
-              </p>
-              <div className="solar-actions">
-                <Link className="solar-button" href="/signup">
-                  Create account <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-                <a className="solar-link-button" href="#product">
-                  Explore Helios <ArrowDown size={17} aria-hidden="true" />
-                </a>
-              </div>
+          <SolarEclipse animation={<SolarEclipseVideo />} />
+          <div className="solar-container solar-hero-copy">
+            <h1 id="hero-heading">
+              Bring your team’s{" "}<span className="solar-hero-heading-line">work <span>into focus.</span></span>
+            </h1>
+            <p className="solar-hero-description">
+              Plan projects, manage approvals and requests, track leave, and
+              collaborate in one connected workspace.
+            </p>
+            <div className="solar-actions">
+              <Link className="solar-button" href="/signup">
+                Create account <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <a className="solar-link-button" href="#journey">
+                Explore Helios <ArrowDown size={17} aria-hidden="true" />
+              </a>
             </div>
           </div>
         </section>
@@ -113,11 +127,12 @@ export function LandingPage() {
             ))}
           </Showcase>
         </section>
-        <div className="solar-chapters solar-container">
+        <div id="journey" className="solar-chapters solar-container">
           {CHAPTERS.map((chapter, index) => (
             <section
               key={chapter.label}
               className={`solar-chapter ${index % 2 ? "solar-chapter-reverse" : ""}`}
+              data-solar-scene={index}
               aria-labelledby={`chapter-${index}`}
             >
               <div className="solar-chapter-copy">
@@ -127,7 +142,13 @@ export function LandingPage() {
                 <div className="solar-chapter-detail">{chapter.detail}</div>
               </div>
               <div className="solar-chapter-preview">
-                <ProductPreview index={index} compact />
+                <div className="solar-planet-scene" aria-hidden="true">
+                  <div className="solar-planet-orbit" />
+                  <div className="solar-planet" />
+                </div>
+                <div className="solar-flight-preview">
+                  <ProductPreview index={index} compact />
+                </div>
               </div>
             </section>
           ))}
@@ -224,22 +245,6 @@ export function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="solar-footer solar-container">
-        <div>
-          <Link href="/" className="solar-brand">
-            <BrandLogo />
-          </Link>
-          <p>{BRAND.description}</p>
-        </div>
-        <nav aria-label="Footer navigation">
-          <a href="#product">Product</a>
-          <a href="#faq">FAQ</a>
-          <Link href="/login">Sign in</Link>
-        </nav>
-        <small>
-          © {new Date().getFullYear()} {BRAND.name}
-        </small>
-      </footer>
-    </div>
+    </SolarMotion>
   );
 }

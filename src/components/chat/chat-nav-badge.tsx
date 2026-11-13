@@ -34,7 +34,7 @@ export function ChatNavBadge({ collapsed }: ChatNavBadgeProps) {
 
     const supabase = createClient();
     const channel = supabase
-      .channel("chat-nav-badge")
+      .channel(`chat-nav-badge-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
@@ -62,6 +62,7 @@ export function ChatNavBadge({ collapsed }: ChatNavBadgeProps) {
   if (collapsed) {
     return (
       <span
+        aria-label={`${label} unread messages`}
         className={cn(
           "absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-semibold leading-none text-white"
         )}
@@ -71,7 +72,7 @@ export function ChatNavBadge({ collapsed }: ChatNavBadgeProps) {
     );
   }
   return (
-    <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
+    <span aria-label={`${label} unread messages`} className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
       {label}
     </span>
   );

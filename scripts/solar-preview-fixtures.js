@@ -1,7 +1,7 @@
 // Fixture backend for the explicit local review server only. Not imported by src/.
 export const user={id:'00000000-0000-4000-8000-000000000001',full_name:'Jordan Reed',email:'jordan@example.test',avatar_url:null};
 const other={...user,id:'00000000-0000-4000-8000-000000000002',full_name:'Alex Taylor',email:'alex@example.test'};
-export const fixture={incoming:false};
+export const fixture={incoming:false,workEmpty:false};
 const now=new Date().toISOString();
 export const boards=[{id:'10000000-0000-4000-8000-000000000001',name:'Operations',description:'Weekly work and decisions',owner_id:user.id,created_at:now,updated_at:now,color:'#9a5704',icon:null,cover_url:null}];
 const favorites = new Set();
@@ -30,7 +30,18 @@ window.fetch=async(input,init)=>{
  else if(url.pathname.startsWith('/api/admin/employees')){if(method==='PATCH'){if(body.firstName)person.full_name=[body.firstName,body.lastName].filter(Boolean).join(' ');value={ok:true};}else value={items:[person],total:1,page:1};}
  else if(url.pathname.startsWith('/api/admin/audit'))value={items:[],total:0,page:1};
  else if(url.pathname.endsWith('/operations'))value=null;
- else if(url.pathname.startsWith('/api/my-work'))value={items:[{id:'task',title:'Review weekly handover',board_id:boards[0].id,column_id:'todo',priority:'high',due_date:now,is_blocked:false,board:boards[0],column:{id:'todo',name:'To do'},group:'today',is_due_today:true,is_overdue:false}],counts:{overdue:0,dueToday:1,blocked:0,totalOpen:1,pendingMyReview:0},total:1,page:1,pageSize:50,boards};
+ else if(url.pathname==='/api/my-work'){
+  const title='Review weekly handover';
+  const filter=url.searchParams.get('search')||'';
+  const showTask=!fixture.workEmpty&&url.searchParams.get('tab')!=='attention'&&title.toLowerCase().includes(filter.toLowerCase());
+  const items=showTask?[{id:'task',title,board_id:boards[0].id,column_id:'todo',priority:'high',due_date:now,is_blocked:false,board:boards[0],column:{id:'todo',name:'To do'},group:'today',is_due_today:true,is_overdue:false}]:[];
+  value={items,counts:{overdue:0,dueToday:fixture.workEmpty?0:1,blocked:0,totalOpen:fixture.workEmpty?0:1,pendingMyReview:0},total:items.length,page:1,pageSize:50,boards};
+ }
+ else if(url.pathname==='/api/dashboard/stats')value={totalBoards:2,totalCards:21,dueThisWeek:6,overdue:2,teamMembers:4};
+ else if(url.pathname==='/api/dashboard/activity')value={items:[]};
+ else if(url.pathname==='/api/notifications')value={notifications:[],unread_count:0};
+ else if(url.pathname===`/api/boards/${boards[0].id}`)value={...boards[0],columns:['To do','In progress','Done'].map((name,position)=>({id:'column-'+position,name,board_id:boards[0].id,position,cards:[]}))};
+ else if(url.pathname===`/api/boards/${boards[0].id}/sharing`)value={members:[user],invitations:[],pendingCount:0,canManage:true};
  else if(url.pathname==='/api/service-desk/teams')value={teams:[team]};
  else if(url.pathname.startsWith('/api/service-desk/tickets'))value={items:[],total:0,pageSize:25,counts:{mine:0,queue:0,reviews:0,assigned:0}};
  else if(url.pathname.startsWith('/api/leave-desk/')){const endpoint=url.pathname.split('/').at(-1);value=endpoint==='context'?leaveContext:endpoint==='balances'?balances:endpoint==='calendar'?{events:[],holidays:[],warnings:[]}:endpoint==='insights'?{balances,people_away:[],overlaps:[],pending_count:0,average_wait_days:0,monthly:[],unresolved_ncns:0}:[];}
