@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type PointerEvent } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,6 @@ import {
 import {
   Plus,
   Loader2,
-  LayoutGrid,
   ArrowLeft,
   Search,
   Star,
@@ -226,7 +227,8 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
     return list;
   }, [boards, query, sort, favorites, boardStats]);
 
-  const compactCreate = view === "list" || (boards.length > 0 && filteredSorted.length === 0);
+  const firstBoard = boards.length === 0;
+  const compactCreate = firstBoard || view === "list" || filteredSorted.length === 0;
   const createDialog = (
     <Dialog
       open={open || createRequested}
@@ -243,8 +245,10 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
       }}
     >
       <DialogTrigger className={cn(
-        "cursor-pointer items-center justify-center border border-border text-muted-foreground transition hover:bg-muted/40 hover:text-foreground",
-        compactCreate ? "inline-flex h-9 rounded-md bg-card px-3" : "flex min-h-[148px] flex-col rounded-lg border-2 border-dashed bg-transparent hover:border-muted-foreground/50"
+        "cursor-pointer items-center justify-center transition",
+        firstBoard && "inline-flex min-h-11 rounded-md bg-primary px-4 text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        !firstBoard && "border border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+        !firstBoard && (compactCreate ? "inline-flex h-9 rounded-md bg-card px-3" : "flex min-h-[148px] flex-col rounded-lg border-2 border-dashed bg-transparent hover:border-muted-foreground/50")
       )}>
         <div className={cn("flex items-center gap-1.5", !compactCreate && "flex-col")}>
           <Plus className="h-5 w-5" />
@@ -351,12 +355,17 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
     </Dialog>
   );
 
-  if (boards.length === 0) {
+  if (firstBoard) {
     return (
       <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center animate-fade-in">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-background shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <LayoutGrid className="h-6 w-6 text-muted-foreground" />
-        </div>
+        <Image
+          src="/illustrations/first-board.webp"
+          alt=""
+          width={600}
+          height={400}
+          unoptimized
+          className="h-auto w-52 max-w-full rounded-xl border border-border"
+        />
         <h2 className="mt-5 text-[18px] font-semibold text-foreground">
           Create your first board
         </h2>
@@ -463,6 +472,18 @@ export function BoardList({ boards, userId, boardStats = {} }: BoardListProps) {
   );
 }
 
+function moveBoardSpotlight(event: PointerEvent<HTMLDivElement>) {
+  if (event.pointerType === "touch" ||
+      !window.matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches) {
+    return;
+  }
+
+  const card = event.currentTarget;
+  const bounds = card.getBoundingClientRect();
+  card.style.setProperty("--spotlight-x", `${event.clientX - bounds.left}px`);
+  card.style.setProperty("--spotlight-y", `${event.clientY - bounds.top}px`);
+}
+
 function BoardGridCard({
   board,
   favorite,
@@ -474,7 +495,6 @@ function BoardGridCard({
   onToggleFavorite: () => void;
   stats?: BoardStats;
 }) {
-  const router = useRouter();
   const color = getBoardColor(board.id);
   const total = stats?.total ?? 0;
   const done = stats?.done ?? 0;
@@ -483,8 +503,8 @@ function BoardGridCard({
 
   return (
     <div
-      onClick={() => router.push(`/dashboard/board/${board.id}`)}
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-border hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+      onPointerMove={moveBoardSpotlight}
+      className="board-grid-card relative isolate flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
     >
       <div className="h-1 w-full" style={{ backgroundColor: color }} />
       <div className="flex flex-1 flex-col gap-3 p-5">
@@ -497,7 +517,13 @@ function BoardGridCard({
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-[15px] font-semibold text-foreground">
-              {board.name}
+              <Link
+                href={`/dashboard/board/${board.id}`}
+                prefetch={false}
+                className="board-grid-card-link after:absolute after:inset-0 after:z-10"
+              >
+                {board.name}
+              </Link>
             </h3>
             <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">
               {board.description || "No description"}
@@ -505,16 +531,13 @@ function BoardGridCard({
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite();
-            }}
+            onClick={onToggleFavorite}
             aria-label={favorite ? "Unfavorite" : "Favorite"}
             className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors",
+              "board-grid-favorite relative z-20 flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               favorite
-                ? "text-[#F2994A]"
-                : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Star
@@ -552,7 +575,7 @@ function BoardGridCard({
             })}
           </span>
           {overdue > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#EB5757]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#EB5757]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10.5px] font-semibold text-destructive">
               <AlertCircle className="h-3 w-3" />
               {overdue} overdue
             </span>
