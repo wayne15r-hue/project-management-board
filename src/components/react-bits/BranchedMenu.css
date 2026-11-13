@@ -1,0 +1,117 @@
+.branched-menu {
+  --bm-accent: var(--sidebar-primary);
+  --bm-line: var(--sidebar-border);
+  --bm-ease-out: cubic-bezier(.23, 1, .32, 1);
+  display: grid;
+  gap: 10px;
+}
+
+.branched-menu__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.branched-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding-inline: 6px;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.branched-menu__head:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.branched-menu__head svg {
+  transform: rotate(-90deg);
+  transition: transform 220ms var(--bm-ease-out);
+}
+
+.branched-menu__section[data-open] .branched-menu__head svg {
+  transform: rotate(0);
+}
+
+.branched-menu__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 270ms var(--bm-ease-out);
+}
+
+.branched-menu__section[data-open] .branched-menu__body {
+  grid-template-rows: 1fr;
+}
+
+.branched-menu__tree {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.branched-menu__item {
+  position: relative;
+  padding-left: 22px;
+}
+
+.branched-menu__item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 12px;
+  width: 1px;
+  background: var(--bm-line);
+}
+
+.branched-menu__lines {
+  position: absolute;
+  top: calc(50% - 10px);
+  left: 11px;
+  width: 12px;
+  height: 11px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.branched-menu__item:last-child::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  height: max(0px, calc(50% - 10px));
+  width: 1px;
+  background: var(--bm-line);
+}
+
+.branched-menu__base,
+.branched-menu__reach {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.branched-menu__base {
+  stroke: var(--bm-line);
+}
+
+.branched-menu__reach {
+  stroke: var(--bm-accent);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 400ms var(--bm-ease-out);
+}
+
+.branched-menu__item:has([aria-current="page"]) .branched-menu__reach {
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .branched-menu__body,
+  .branched-menu__head svg,
+  .branched-menu__reach {
+    transition: none;
+  }
+}

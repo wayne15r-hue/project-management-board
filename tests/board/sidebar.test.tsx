@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Sidebar } from "@/components/shared/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Board } from "@/types";
@@ -26,6 +26,13 @@ it("identifies the current board and exposes creation without showing Admin to m
     expect(screen.getByRole("link", { name: "New board" }).getAttribute("href")).toBe("/dashboard?new=true");
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
     expect(screen.getByRole("link", { name: /^Chat\s*3$/ }).textContent).toBe("Chat3");
+    const boards = screen.getByRole("button", { name: "Boards" });
+    expect(boards.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(boards);
+    expect(screen.queryByRole("link", { name })).toBeNull();
+    expect(screen.getByRole("link", { name: "New board" })).toBeTruthy();
+    fireEvent.click(boards);
+    expect(screen.getByRole("link", { name }).getAttribute("aria-current")).toBe("page");
   } finally {
     vi.unstubAllGlobals();
   }

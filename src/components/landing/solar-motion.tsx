@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import GhostFibers from "@/components/react-bits/GhostFibers";
 
 const preferenceKey = "helios-reduce-motion";
 const preferenceChanged = "helios-motion-preference-changed";
@@ -80,6 +81,7 @@ export function SolarMotion({ children, footer }: { children: React.ReactNode; f
 
   return (
     <div ref={root} className="solar-page" data-reduced-motion={ready ? reduced : undefined}>
+      {ready && !reduced && <SolarFibers />}
       <AmbientMotion.Provider value={ready && !reduced}>{children}</AmbientMotion.Provider>
       <footer className="solar-footer solar-container">
         {footer}
@@ -112,6 +114,25 @@ export function SolarMotion({ children, footer }: { children: React.ReactNode; f
 export function SolarEclipseVideo() {
   const enabled = useContext(AmbientMotion);
   return enabled ? <EclipseLoop /> : null;
+}
+
+function SolarFibers() {
+  return (
+    <div className="solar-fibers" aria-hidden="true">
+      <GhostFibers
+        glowColor="#597fc7"
+        lineColor="#7197de"
+        secondaryColor="#e8a35e"
+        speed={0.27}
+        layers={2}
+        threads={44}
+        dpr={1}
+        mouseInteraction={false}
+        pulseOnClick={false}
+        intro={false}
+      />
+    </div>
+  );
 }
 
 function EclipseLoop() {
