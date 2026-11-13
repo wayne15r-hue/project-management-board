@@ -15,7 +15,6 @@ import { BrandMark } from "@/components/shared/brand-logo";
 export const CHAPTERS = [
   {
     label: "Work",
-    eyebrow: "A clear path from plan to done",
     title: "Keep the big picture. Move the small things.",
     description:
       "Plan on boards, switch to a table or timeline, and find your assignments in My Work. Use AI to draft tasks or extract next steps from a brief.",
@@ -23,7 +22,6 @@ export const CHAPTERS = [
   },
   {
     label: "Approvals",
-    eyebrow: "Decisions with a trail",
     title: "Make the handoff as clear as the work.",
     description:
       "Name an independent reviewer, discuss the deliverable and see what needs attention. Flag blocked work with a reason, and keep the decision history in view.",
@@ -31,7 +29,6 @@ export const CHAPTERS = [
   },
   {
     label: "Service Desk",
-    eyebrow: "A home for the everyday ask",
     title: "Turn “can someone help?” into a clear next step.",
     description:
       "Give internal requests a place to land. Triage tickets, assign an owner and add approval gates where needed, with team access and private attachments.",
@@ -39,7 +36,6 @@ export const CHAPTERS = [
   },
   {
     label: "LeaveDesk",
-    eyebrow: "Plan around people",
     title: "See availability. Give everyone room.",
     description:
       "Bring leave balances, working calendars and manager reviews into one workflow. Department calendars help teammates plan around availability while sensitive files stay restricted.",
@@ -47,7 +43,6 @@ export const CHAPTERS = [
   },
   {
     label: "Chat & Calls",
-    eyebrow: "Stay close to the context",
     title: "From a quick message to a shared perspective.",
     description:
       "Talk in direct and group conversations, move into a video call and follow shared screens. AI writing assistance and summaries support the conversation. Calls and AI depend on workspace configuration.",
@@ -55,7 +50,6 @@ export const CHAPTERS = [
   },
   {
     label: "People",
-    eyebrow: "A workspace with people at its center",
     title: "Know who’s who. And who to go to.",
     description:
       "Keep employee records, departments and reporting managers connected. Administrative access stays with authorized people, so the right person can maintain the right information.",

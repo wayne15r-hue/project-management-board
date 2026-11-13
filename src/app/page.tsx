@@ -1,9 +1,9 @@
-import { Space_Grotesk } from "next/font/google";
+import { Bebas_Neue } from "next/font/google";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LandingPage } from "@/components/landing/landing-page";
 
-const marketingFont = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
+const marketingFont = Bebas_Neue({ subsets: ["latin"], weight: "400", variable: "--font-helios-display", display: "swap" });
 
 export const dynamic = "force-dynamic";
 

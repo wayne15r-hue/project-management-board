@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Check, ShieldCheck, Sun } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ShieldCheck, Sun } from "lucide-react";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { BRAND } from "@/lib/brand";
+import { EclipseHeroMedia } from "./eclipse-hero-media";
 import { CHAPTERS, ProductPreview } from "./product-preview";
 import { Showcase } from "./showcase";
 import "./solar.css";
@@ -69,43 +70,30 @@ export function LandingPage() {
       </header>
       <main id="main">
         <section
-          className="solar-hero solar-container"
+          className="solar-hero"
           aria-labelledby="hero-heading"
         >
-          <p className="solar-eyebrow">
-            <span className="solar-orbit-dot" /> PROJECTS. PEOPLE. DAILY
-            OPERATIONS.
-          </p>
-          <h1 id="hero-heading">Bring your team’s work into focus.</h1>
-          <p className="solar-hero-description">
-            Plan projects, manage approvals and requests, track leave, and
-            collaborate in one connected workspace.
-          </p>
-          <div className="solar-actions">
-            <Link className="solar-button" href="/signup">
-              Create account <ArrowRight size={18} aria-hidden="true" />
-            </Link>
-            <a className="solar-link-button" href="#product">
-              Explore Helios <span aria-hidden="true">↘</span>
-            </a>
-          </div>
-          <p className="solar-hero-footnote">
-            A shared direction for the work ahead.
-          </p>
-          <div className="solar-hero-preview">
-            <div className="solar-halo" aria-hidden="true" />
-            <ProductPreview index={0} />
-          </div>
-          <div className="solar-workflow-strip">
-            <span>
-              <Check size={15} /> Plan with context
-            </span>
-            <span>
-              <Check size={15} /> Make ownership clear
-            </span>
-            <span>
-              <Check size={15} /> Keep people connected
-            </span>
+          <EclipseHeroMedia />
+          <div className="solar-hero-shade" aria-hidden="true" />
+          <div className="solar-container solar-hero-inner">
+            <div className="solar-hero-copy">
+              <h1 id="hero-heading">
+                <span>Bring your team’s</span>{" "}
+                <span>work <span>into focus.</span></span>
+              </h1>
+              <p className="solar-hero-description">
+                Plan projects, manage approvals and requests, track leave, and
+                collaborate in one connected workspace.
+              </p>
+              <div className="solar-actions">
+                <Link className="solar-button" href="/signup">
+                  Create account <ArrowRight size={18} aria-hidden="true" />
+                </Link>
+                <a className="solar-link-button" href="#product">
+                  Explore Helios <ArrowDown size={17} aria-hidden="true" />
+                </a>
+              </div>
+            </div>
           </div>
         </section>
         <section
@@ -114,11 +102,9 @@ export function LandingPage() {
           aria-labelledby="product-heading"
         >
           <div className="solar-section-heading">
-            <p className="solar-eyebrow">ONE WORKSPACE. MANY MOVING PARTS.</p>
-            <h2 id="product-heading">Everything in its orbit.</h2>
+            <h2 id="product-heading">Explore the Helios workspace</h2>
             <p>
-              Follow the work from the first idea to the everyday details that
-              make it happen.
+              See how projects, requests, and team operations fit together.
             </p>
           </div>
           <Showcase labels={CHAPTERS.map((chapter) => chapter.label)}>
@@ -135,10 +121,7 @@ export function LandingPage() {
               aria-labelledby={`chapter-${index}`}
             >
               <div className="solar-chapter-copy">
-                <span className="solar-chapter-number">
-                  0{index + 1} / {chapter.label}
-                </span>
-                <p className="solar-eyebrow">{chapter.eyebrow}</p>
+                <p className="solar-eyebrow">{chapter.label}</p>
                 <h2 id={`chapter-${index}`}>{chapter.title}</h2>
                 <p>{chapter.description}</p>
                 <div className="solar-chapter-detail">{chapter.detail}</div>
@@ -152,8 +135,7 @@ export function LandingPage() {
         <section id="how-it-works" className="solar-section solar-how">
           <div className="solar-container">
             <div className="solar-section-heading">
-              <p className="solar-eyebrow">A SHARED STARTING POINT</p>
-              <h2>Find your team’s rhythm.</h2>
+              <h2>How Helios works</h2>
             </div>
             <ol className="solar-steps">
               {[
@@ -182,12 +164,7 @@ export function LandingPage() {
         >
           <div>
             <ShieldCheck size={30} aria-hidden="true" />
-            <p className="solar-eyebrow">CONNECTION WITH CLEAR BOUNDARIES</p>
-            <h2 id="control-heading">
-              Shared work.
-              <br />
-              Thoughtful control.
-            </h2>
+            <h2 id="control-heading">Access and approvals</h2>
           </div>
           <div className="solar-control-list">
             {[
@@ -220,12 +197,7 @@ export function LandingPage() {
           aria-labelledby="faq-heading"
         >
           <div>
-            <p className="solar-eyebrow">A LITTLE MORE CLARITY</p>
-            <h2 id="faq-heading">
-              Good questions.
-              <br />
-              Straight answers.
-            </h2>
+            <h2 id="faq-heading">Frequently asked questions</h2>
           </div>
           <div>
             {FAQ.map(([question, answer]) => (
@@ -241,9 +213,7 @@ export function LandingPage() {
         </section>
         <section className="solar-closing solar-container">
           <Sun size={34} aria-hidden="true" />
-          <p className="solar-eyebrow">GIVE YOUR WORK A SHARED DIRECTION</p>
-          <h2>A clearer day starts here.</h2>
-          <p>Your projects. Your people. The work in between.</p>
+          <h2>Get started with Helios</h2>
           <div className="solar-actions">
             <Link href="/signup" className="solar-button">
               Create account <ArrowRight size={18} aria-hidden="true" />

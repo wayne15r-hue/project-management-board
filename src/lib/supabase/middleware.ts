@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  if (pathname === "/landing/eclipse.webm") return NextResponse.next({ request });
   if (/^\/audio\/ringtones\/(?:dawn-chimes|warm-keys|soft-marimba|orbit-bells)\.wav$/.test(pathname)) return NextResponse.next({request});
   // The cron authenticates its bearer; the two pg_net wakeups perform only
   // fixed-purpose, service-authorized maintenance and consume no request targets.
