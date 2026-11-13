@@ -1,0 +1,77 @@
+.solar-auth {
+  display: grid;
+  min-height: 100svh;
+  background: var(--background);
+}
+
+.solar-auth-main {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: clamp(20px, 5vw, 68px);
+  background: radial-gradient(ellipse at 0 100%, var(--accent), transparent 64%);
+}
+
+.solar-auth-panel {
+  width: min(100%, 480px);
+  padding: clamp(24px, 4vw, 44px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 28px 85px -52px #0008;
+}
+
+.solar-auth-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 32px;
+  color: var(--primary);
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.solar-auth-panel h1 {
+  font-size: clamp(1.8rem, 4vw, 2.55rem);
+  line-height: 1.12;
+  letter-spacing: -.045em;
+}
+
+.solar-auth-art {
+  position: relative;
+  isolation: isolate;
+  min-height: 245px;
+  overflow: hidden;
+  background: #050609;
+}
+
+.solar-auth-art .solar-eclipse-frame {
+  width: max(112%, 660px);
+  left: 50%;
+  right: auto;
+  transform: translate(-69%, -50%);
+  mask-image: radial-gradient(ellipse 34% 57% at 69% 50%, #000 47%, transparent 100%);
+}
+
+.solar-auth-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 32%, #0a101bb5 100%);
+}
+
+@media (min-width: 800px) {
+  .solar-auth {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  }
+  .solar-auth-art {
+    grid-column: 1;
+    grid-row: 1;
+    border-right: 1px solid var(--border);
+  }
+  .solar-auth-art .solar-eclipse-frame {
+    width: max(135%, 980px);
+  }
+}

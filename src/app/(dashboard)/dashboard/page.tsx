@@ -66,24 +66,24 @@ export default async function DashboardPage() {
   const boardStats = Object.fromEntries(boardStatsMap);
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 animate-fade-in">
-      <div className="mb-6 pl-12 md:pl-0">
-        <h1 className="text-[28px] font-bold leading-tight text-foreground">
-          Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
+    <div className="mx-auto w-full max-w-screen-2xl px-4 py-5 md:px-7 md:py-7">
+      <header className="workspace-page-intro mb-5">
+        <h1>
+          All Boards
         </h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Here&apos;s what&apos;s happening across your projects.
+        <p className="mt-2 text-sm text-muted-foreground">
+          {profile?.full_name ? `${profile.full_name.split(" ")[0]}, here’s what’s happening across your projects.` : "See what’s happening across your projects."}
         </p>
-      </div>
+      </header>
 
       <div className="mb-6">
         <DashboardStats />
       </div>
 
-      <div className="mb-6 grid gap-5 lg:grid-cols-[1fr_320px]">
-        <div>
+      <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)]">
+        <div className="min-w-0">
           <BoardInvitationInbox userId={user!.id} />
-          <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
             Your boards
           </h2>
           <BoardList
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
             boardStats={boardStats}
           />
         </div>
-        <div className="lg:pt-0">
+        <div className="min-w-0">
           <RecentActivity />
         </div>
       </div>

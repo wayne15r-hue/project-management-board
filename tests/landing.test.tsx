@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LandingPage } from "@/components/landing/landing-page";
 
 beforeEach(() => {
-  vi.stubGlobal("matchMedia", vi.fn(() => ({
+  localStorage.clear();
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  vi.stubGlobal("matchMedia", () => ({
     matches: false,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  })));
+    addEventListener() {},
+    removeEventListener() {},
+  }));
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -19,8 +21,27 @@ beforeEach(() => {
     },
   );
 });
+
+it("offers a footer motion preference that survives remounting", () => {
+  const first = render(<LandingPage />);
+  expect(screen.queryByRole("button", { name: /pause animation/i })).toBeNull();
+  const video = first.container.querySelector("video")!;
+  expect(video.loop && video.muted).toBe(true);
+  expect(video.dataset.playing).toBe("false");
+  fireEvent.playing(video);
+  expect(video.dataset.playing).toBe("true");
+  const setting = within(screen.getByRole("contentinfo")).getByRole("checkbox", { name: "Reduce motion" }) as HTMLInputElement;
+  expect(setting.checked).toBe(false);
+  fireEvent.click(setting);
+  expect(first.container.querySelector(".solar-page")?.getAttribute("data-reduced-motion")).toBe("true");
+  expect(first.container.querySelector("video")).toBeNull();
+  first.unmount();
+  render(<LandingPage />);
+  expect((screen.getByRole("checkbox", { name: "Reduce motion" }) as HTMLInputElement).checked).toBe(true);
+});
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -65,43 +86,18 @@ it("switches previews without making private API or media requests", () => {
   ).toBeNull();
 });
 
-it("keeps the poster until eligible desktop video plays, then offers a pause control", () => {
-  vi.mocked(window.matchMedia).mockReturnValue({
-    matches: true,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  } as unknown as MediaQueryList);
-  const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
-  try {
-    const { container } = render(<LandingPage />);
-    const video = container.querySelector("video")!;
-    expect(video.getAttribute("src")).toBe("/landing/eclipse.webm");
-    expect(video.getAttribute("data-visible")).toBe("false");
-    expect(screen.queryByRole("button", { name: "Pause animation" })).toBeNull();
-    expect(play).toHaveBeenCalled();
-    fireEvent.playing(video);
-    expect(video.getAttribute("data-visible")).toBe("true");
-    expect(screen.getByRole("button", { name: "Pause animation" })).toBeTruthy();
-    fireEvent.error(video);
-    expect(video.getAttribute("data-visible")).toBe("false");
-    expect(container.querySelector('img[src="/landing/eclipse.webp"]')).toBeTruthy();
-  } finally {
-    play.mockRestore();
-  }
-});
-
 it("renders all six sample panels, real CTAs and content on the server without JavaScript", () => {
   const html = renderToStaticMarkup(<LandingPage />);
   const doc = new DOMParser().parseFromString(html, "text/html");
   expect(doc.querySelector("h1")?.textContent).toBe(
     "Bring your team’s work into focus.",
   );
-  expect(doc.querySelector("h1 span span")?.textContent).toBe("into focus.");
-  expect(doc.querySelector('img[src="/landing/eclipse.webp"]')?.getAttribute("alt")).toBe("");
-  expect(doc.querySelector("video[src], video source")).toBeNull();
-  expect(doc.querySelector('.solar-hero a[href="#product"]')?.textContent).toContain("Explore Helios");
   expect(doc.querySelectorAll("[data-sample-panel]").length).toBe(6);
   expect(doc.querySelectorAll("[data-sample-panel][hidden]").length).toBe(0);
+  expect(doc.querySelectorAll("[data-solar-scene]").length).toBe(6);
+  expect(doc.querySelector(".solar-page")?.hasAttribute("data-reduced-motion")).toBe(false);
+  expect(doc.querySelector('img[src="/landing/eclipse.webp"]')?.getAttribute("alt")).toBe("");
+  expect(doc.querySelector("video")).toBeNull();
   expect(doc.querySelector('a[href="/signup"]')?.textContent).toContain(
     "Create account",
   );

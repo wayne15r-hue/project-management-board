@@ -8,10 +8,10 @@ import Login from '@/app/(auth)/login/page';
 beforeEach(()=>{auth.password.mockReset().mockResolvedValue({error:null});auth.oauth.mockReset();auth.push.mockReset();});
 afterEach(cleanup);
 it('advances an unknown formatted email locally and preserves it when changed',()=>{
- render(<Login/>);expect(screen.queryByLabelText('Password')).toBeNull();
+ render(<Login/>);expect(screen.getByRole('heading',{name:'Sign in to Helios'})).toBeTruthy();expect(screen.queryByLabelText('Password')).toBeNull();
  fireEvent.change(screen.getByLabelText(/Email/i),{target:{value:'unknown@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Next'}));
  expect(screen.getByLabelText('Password')).toBeTruthy();expect(auth.password).not.toHaveBeenCalled();expect(auth.oauth).not.toHaveBeenCalled();
- fireEvent.click(screen.getByRole('button',{name:'Change email'}));expect((screen.getByLabelText(/Email/i) as HTMLInputElement).value).toBe('unknown@example.test');
+ fireEvent.click(screen.getByRole('button',{name:'Change email'}));const email=screen.getByLabelText(/Email/i) as HTMLInputElement;expect(email.value).toBe('unknown@example.test');expect(document.activeElement).toBe(email);
 });
 it('retains password-manager fields and typed password through visibility toggling, then preserves the redirect',async()=>{
  render(<Login/>);fireEvent.change(screen.getByLabelText(/Email/i),{target:{value:'jordan@example.test'}});fireEvent.click(screen.getByRole('button',{name:'Next'}));

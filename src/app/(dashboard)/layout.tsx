@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shared/sidebar";
-import { MobileSidebarToggle } from "@/components/shared/mobile-sidebar-toggle";
+import { WorkspaceShell } from "@/components/shared/workspace-shell";
 import { AICommandBar } from "@/components/ai/ai-command-bar";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AuthSessionBoundary } from "@/components/shared/auth-session-boundary";
 import { CallProvider } from '@/components/calls/call-provider';
 
@@ -41,25 +40,23 @@ export default async function DashboardLayout({
 
   return (
     <AuthSessionBoundary key={user.id} userId={user.id}>
-    <CallProvider currentUserId={user.id}>
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        isEmployeeAdmin={!!adminRole}
-        boards={boards || []}
-        userEmail={user.email || ""}
-        userName={profile?.full_name || null}
-        userAvatarUrl={profile?.avatar_url || null}
-      />
-      <main className="relative flex min-w-0 flex-1 flex-col overflow-auto">
-        <MobileSidebarToggle />
-        <div className="fixed right-3 top-3 z-30">
-          <NotificationBell userId={user.id} />
-        </div>
-        {children}
-      </main>
-      <AICommandBar />
-    </div>
-    </CallProvider>
+      <CallProvider currentUserId={user.id}>
+        <WorkspaceShell
+          userId={user.id}
+          sidebar={
+            <Sidebar
+              isEmployeeAdmin={!!adminRole}
+              boards={boards || []}
+              userEmail={user.email || ""}
+              userName={profile?.full_name || null}
+              userAvatarUrl={profile?.avatar_url || null}
+            />
+          }
+        >
+          {children}
+          <AICommandBar />
+        </WorkspaceShell>
+      </CallProvider>
     </AuthSessionBoundary>
   );
 }

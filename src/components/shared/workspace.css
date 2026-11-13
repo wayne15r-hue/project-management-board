@@ -1,0 +1,84 @@
+.workspace-sidebar {
+  flex-direction: column;
+  border-right: 1px solid var(--sidebar-border);
+  background: linear-gradient(160deg, #fffaf0 0%, var(--sidebar) 50%);
+  color: var(--sidebar-foreground);
+}
+
+.dark .workspace-sidebar {
+  --sidebar: #0c1626;
+  --sidebar-border: #27374e;
+  background: radial-gradient(ellipse at 0% 0%, #192941, transparent 52%), var(--sidebar);
+}
+
+.workspace-sidebar[role="dialog"]:not([hidden]) {
+  display: flex;
+}
+
+.workspace-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding-block: 7px;
+  border-radius: 9px;
+  font-size: .875rem;
+  line-height: 1.25;
+  color: var(--sidebar-foreground);
+}
+
+.workspace-sidebar[role="dialog"] .workspace-nav-link {
+  min-height: 44px;
+}
+
+.workspace-nav-link:hover,
+.workspace-nav-link[aria-current="page"] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.workspace-nav-link[aria-current="page"] {
+  font-weight: 600;
+}
+
+.workspace-nav-link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--sidebar-primary);
+}
+
+.workspace-sidebar :is(a, button):focus-visible,
+.workspace-topbar button:focus-visible {
+  outline: 2px solid var(--sidebar-ring);
+  outline-offset: -2px;
+}
+
+.workspace-topbar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding-inline: clamp(12px, 2vw, 28px);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.workspace-page-intro {
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 58%), var(--card);
+}
+
+.workspace-page-intro h1 {
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 650;
+  letter-spacing: -.04em;
+  line-height: 1.15;
+}
