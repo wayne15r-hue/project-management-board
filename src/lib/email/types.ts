@@ -1,0 +1,31 @@
+export const EMAIL_FOLDERS = ["inbox", "sent", "drafts", "archive", "trash"] as const;
+export const EMAIL_KINDS = ["to", "cc", "bcc"] as const;
+export const EMAIL_ACTIONS = ["read", "unread", "archive", "unarchive", "trash", "restore", "read_all"] as const;
+export type EmailFolder = typeof EMAIL_FOLDERS[number];
+export type EmailKind = typeof EMAIL_KINDS[number];
+export type EmailAction = typeof EMAIL_ACTIONS[number];
+export type EmailPerson = { id: string; name: string; eligible?: boolean; email?: string };
+export type EmailRecipient = EmailPerson & { kind: EmailKind };
+export type EmailAttachment = { id: string; name: string; bytes: number };
+export type EmailRow = { id: string; subject: string; sentAt: string; sender?: string; recipients?: string | null; isRead?: boolean };
+export type EmailList = { items: EmailRow[]; nextOffset: number | null };
+export type EmailMessage = {
+  id: string;
+  direction: "inbox" | "sent";
+  folder: Exclude<EmailFolder, "drafts">;
+  sentAt: string;
+  subject: string;
+  body: string;
+  sender: EmailPerson;
+  recipients: EmailRecipient[];
+  isBcc: boolean;
+  attachments: EmailAttachment[];
+};
+export type EmailDraft = {
+  id: string;
+  version: number;
+  subject: string;
+  body: string;
+  recipients: EmailRecipient[];
+  attachments: EmailAttachment[];
+};

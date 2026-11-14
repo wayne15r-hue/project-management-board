@@ -6,6 +6,8 @@ import { AICommandBar } from "@/components/ai/ai-command-bar";
 import { AuthSessionBoundary } from "@/components/shared/auth-session-boundary";
 import { CallProvider } from '@/components/calls/call-provider';
 
+import { EmailMailboxProvider } from "@/components/email/mailbox-state";
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -38,24 +40,29 @@ export default async function DashboardLayout({
     .select("*")
     .order("created_at", { ascending: false });
 
+  const { data: emailEnabled } = await supabase.rpc("email_enabled");
+
   return (
     <AuthSessionBoundary key={user.id} userId={user.id}>
       <CallProvider currentUserId={user.id}>
-        <WorkspaceShell
-          userId={user.id}
-          sidebar={
-            <Sidebar
-              isEmployeeAdmin={!!adminRole}
-              boards={boards || []}
-              userEmail={user.email || ""}
-              userName={profile?.full_name || null}
-              userAvatarUrl={profile?.avatar_url || null}
-            />
-          }
-        >
-          {children}
-          <AICommandBar />
-        </WorkspaceShell>
+        <EmailMailboxProvider userId={user.id} enabled={emailEnabled === true}>
+          <WorkspaceShell
+            userId={user.id}
+            sidebar={
+              <Sidebar
+                isEmployeeAdmin={!!adminRole}
+                emailEnabled={emailEnabled === true}
+                boards={boards || []}
+                userEmail={user.email || ""}
+                userName={profile?.full_name || null}
+                userAvatarUrl={profile?.avatar_url || null}
+              />
+            }
+          >
+            {children}
+            <AICommandBar />
+          </WorkspaceShell>
+        </EmailMailboxProvider>
       </CallProvider>
     </AuthSessionBoundary>
   );

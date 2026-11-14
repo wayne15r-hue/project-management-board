@@ -7,7 +7,7 @@ export async function updateSession(request: NextRequest) {
   if (/^\/audio\/ringtones\/(?:dawn-chimes|warm-keys|soft-marimba|orbit-bells)\.wav$/.test(pathname)) return NextResponse.next({request});
   // The cron authenticates its bearer; the two pg_net wakeups perform only
   // fixed-purpose, service-authorized maintenance and consume no request targets.
-  if (["/api/cron/due-date-reminders", "/api/calls/maintenance", "/api/notifications/maintenance", "/api/accounts/maintenance"].includes(pathname)) return NextResponse.next({ request });
+  if (["/api/cron/due-date-reminders", "/api/cron/email-maintenance", "/api/calls/maintenance", "/api/notifications/maintenance", "/api/accounts/maintenance"].includes(pathname)) return NextResponse.next({ request });
   let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
