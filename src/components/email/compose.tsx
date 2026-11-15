@@ -5,15 +5,17 @@ import { Paperclip, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadEmailAttachment, emailError, emailPost, emailRequest, EmailRequestError } from "@/lib/email/client";
 import { EMAIL_KINDS, type EmailAttachment, type EmailDraft, type EmailKind, type EmailPerson } from "@/lib/email/types";
+import { EmailDraftAssistant } from "./draft-assistant";
 
 type ComposeDraft = EmailDraft & { forwardSource?: string };
 
 const field = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
 const kinds = { to: "To", cc: "Cc", bcc: "Bcc" };
 
-export function EmailCompose({ userId, initial, onClose, onSaved, onSent }: {
+export function EmailCompose({ userId, initial, aiEnabled, onClose, onSaved, onSent }: {
   userId: string;
   initial: ComposeDraft;
+  aiEnabled: boolean;
   onClose: () => void;
   onSaved: () => void;
   onSent: () => void;
@@ -37,6 +39,7 @@ export function EmailCompose({ userId, initial, onClose, onSaved, onSent }: {
   const [directoryError, setDirectoryError] = useState("");
   const mounted = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const messageField = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -66,6 +69,7 @@ export function EmailCompose({ userId, initial, onClose, onSaved, onSent }: {
           const result = await emailPost<{ version: number }>(userId, {
             action: "save-draft", id: snapshot.id, version: revision.current,
             subject: snapshot.subject, body: snapshot.body,
+            composeKind: revision.current === 0 ? snapshot.composeKind ?? undefined : undefined,
             recipients: snapshot.recipients.map(({ id, kind }) => ({ id, kind })),
           });
           revision.current = result.version;
@@ -239,9 +243,16 @@ export function EmailCompose({ userId, initial, onClose, onSaved, onSent }: {
           <input id={subjectId} className={field} value={draft.subject} maxLength={200}
             onChange={(event) => update({ subject: event.target.value })} />
         </div>
+        {aiEnabled && !hasConflict && (draft.composeKind === "new" || draft.composeKind === "reply") && (
+          <EmailDraftAssistant userId={userId} mode={draft.composeKind} hasSubject={!!draft.subject} hasBody={!!draft.body}
+            onApply={({ subject, body }) => {
+              update({ body, ...(draft.composeKind === "new" && subject !== undefined ? { subject } : {}) });
+              messageField.current?.focus();
+            }} />
+        )}
         <div className="space-y-1">
           <label htmlFor={bodyId} className="text-sm font-medium">Message</label>
-          <textarea id={bodyId} className={field + " min-h-52 resize-y"} value={draft.body} maxLength={50_000}
+          <textarea ref={messageField} id={bodyId} className={field + " min-h-52 resize-y"} value={draft.body} maxLength={50_000}
             onChange={(event) => update({ body: event.target.value })} />
         </div>
 
