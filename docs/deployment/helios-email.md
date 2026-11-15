@@ -17,3 +17,10 @@ Review only aggregate data during the pilot. Count successful sends from email_p
 ## Rollback
 
 Set email_private.settings.mode to off. Refresh the dashboard to verify Email is hidden. Verify the page, direct API and RPC calls, old attachment URLs, and new Realtime subscriptions deny access. The maintenance job pauses retention while Email is off. Restore the previous mode after resolving the issue and check that the same drafts, messages, flags, and files are accessible again.
+
+## Draft with AI pilot
+
+1. Apply `20261115_email_compose_kind.sql` after the mailbox migration, then deploy the app with `EMAIL_AI_ENABLED=false`. Existing drafts open normally. New drafts record their compose kind even while AI is off.
+2. In staging, enable `EMAIL_AI_ENABLED=true` alongside the existing Groq configuration. Test each tone and length with synthetic email context. Test Compose, Reply, Reply All, and reopened drafts. Check that previewing leaves the draft untouched and applying preserves reply subjects and recipient fields.
+3. Verify that the configured model refuses unrelated, harmful, and mixed drafting-and-action requests. Check that an unavailable provider and an exhausted shared daily quota leave manual composition usable. Review outcomes and `ai_usage` counts for `email_draft` without collecting prompt or preview text in Helios.
+4. Enable the flag for the mailbox pilot after staging passes. Disable `EMAIL_AI_ENABLED` and redeploy to remove the assistant and block its endpoint while keeping saved mail and the manual composer available.

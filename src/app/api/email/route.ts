@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EMAIL_ACTIONS, EMAIL_FOLDERS, EMAIL_KINDS } from "@/lib/email/types";
+import { EMAIL_ACTIONS, EMAIL_COMPOSE_KINDS, EMAIL_FOLDERS, EMAIL_KINDS } from "@/lib/email/types";
+import {
+  emailDatabaseError as databaseError, emailFailure as fail, emailJson as json,
+  emailOriginAllowed, emailSession as session,
+} from "@/lib/email/route-access";
 import {
   EMAIL_BUCKET, EmailFileError, emailContentDisposition, emailDownloadLink, readEmailUpload, verifyEmailDownload,
 } from "@/lib/email/files";
 
-type Client = Awaited<ReturnType<typeof createClient>>;
+type Client = Exclude<Awaited<ReturnType<typeof session>>, Response>["db"];
 type Attachment = { path: string; name: string; mime: string };
 const uuid = z.uuid();
 const version = z.number().int().min(1).max(2_147_483_647);
@@ -17,6 +20,7 @@ const input = z.discriminatedUnion("action", [
   draftKey.extend({ action: z.literal("delete-draft") }),
   z.object({ action: z.literal("save-draft"), id: uuid, version: z.number().int().min(0).max(2_147_483_647),
     subject: z.string().max(400), body: z.string().max(100_000),
+    composeKind: z.enum(EMAIL_COMPOSE_KINDS).optional(),
     recipients: z.array(z.object({ id: uuid, kind: z.enum(EMAIL_KINDS) })).max(20) }),
   z.object({ action: z.literal("open"), id: uuid }),
   z.object({ action: z.literal("mailbox"), id: uuid.nullable(), change: z.enum(EMAIL_ACTIONS) }),
@@ -26,40 +30,6 @@ const input = z.discriminatedUnion("action", [
 const folders = z.enum(EMAIL_FOLDERS);
 const offset = z.coerce.number().int().min(0).max(2_147_483_621);
 const noStore = { "Cache-Control": "private, no-store" };
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, { status, headers: noStore });
-}
-
-function fail(message: string, status: number) {
-  return json({ error: message }, status);
-}
-
-function databaseError(error: { code: string; message: string }, action: string) {
-  switch (error.code) {
-    case "42501": return fail("Email is unavailable for this account.", 403);
-    case "P0404": return fail(error.message, 404);
-    case "40001": return fail(error.message, 409);
-    case "P0429": return fail(error.message, 429);
-    case "22023": return fail(error.message, 400);
-    default:
-      console.error("Helios Email request failed", { action, code: error.code });
-      return fail("Email is temporarily unavailable. Try again.", 503);
-  }
-}
-
-async function session(request: Request, signedDownload = false) {
-  const db = await createClient();
-  const { data: { user } } = await db.auth.getUser();
-  if (!user) return fail("Sign in to use Email.", 401);
-  if (!signedDownload && request.headers.get("x-helios-email-user") !== user.id) {
-    return fail("Your account changed. Reload Email to continue.", 409);
-  }
-  const { data, error } = await db.rpc("email_enabled");
-  if (error) return databaseError(error, "access");
-  if (data !== true) return fail("Email is unavailable for this account.", 403);
-  return { db, user };
-}
 
 async function rpc(db: Client, action: string, args?: Record<string, unknown>) {
   const { data, error } = await db.rpc(action, args);
@@ -144,8 +114,7 @@ async function upload(request: Request, draft: string, user: string, draftVersio
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
-  const origin = request.headers.get("origin");
-  if ((origin && origin !== url.origin) || request.headers.get("sec-fetch-site") === "cross-site") {
+  if (!emailOriginAllowed(request)) {
     return fail("Invalid request origin.", 403);
   }
   const access = await session(request);
@@ -169,6 +138,7 @@ export async function POST(request: Request) {
     case "save-draft":
       return rpc(db, "email_save_draft", {
         p_id: body.id, p_version: body.version, p_subject: body.subject, p_body: body.body, p_recipients: body.recipients,
+        ...(body.version === 0 && body.composeKind ? { p_compose_kind: body.composeKind } : {}),
       });
     case "send": {
       const response = await rpc(db, "email_send", { p_id: body.id, p_version: body.version });
