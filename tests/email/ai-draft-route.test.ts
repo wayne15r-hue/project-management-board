@@ -53,6 +53,7 @@ it.each([
   expect(complete).toHaveBeenCalledTimes(1);
   const [payload] = complete.mock.calls[0];
   expect(payload).not.toHaveProperty("tools");
+  expect(payload.temperature).toBe(0.2);
   expect(payload.messages).toHaveLength(2);
   expect(payload.messages[0].role).toBe("system");
   expect(JSON.parse(payload.messages[1].content)).toEqual(input);

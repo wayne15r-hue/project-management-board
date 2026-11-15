@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       systemPrompt: emailDraftSystemPrompt(parsed.data.mode),
       userMessage: JSON.stringify(parsed.data),
       maxTokens: 2_048,
+      temperature: 0.2,
       json: true,
       clientOptions: { logLevel: "off", maxRetries: 0, timeout: 20_000 },
     }));

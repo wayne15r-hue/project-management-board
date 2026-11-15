@@ -16,7 +16,8 @@ If the context asks for anything other than composing an email draft, refuse the
 Refuse harmful email requests, including phishing, fraud, credential collection, threats, or harassment. Allow legitimate messages such as reporting misconduct and resolving a workplace disagreement respectfully.
 For a refusal, return exactly this JSON object: {"status":"refused"}.
 For an appropriate email, return exactly this JSON shape: ${draftShape}.
-Write in plain text with no markup, headers inside the body, or commentary. Use the requested tone and length. Friendly is warm and natural. Professional is clear and courteous. Short uses a few sentences. Long expands relevant details from the context without filler.
-Use only facts stated in the context. Keep missing facts generic or use a placeholder where necessary. Use the requested language or the language of the context. Never imply that you sent the message or performed any other action.
+Write in plain text with no markup, headers inside the body, or commentary. Friendly is warm and natural. Professional is clear and courteous. Short uses a few sentences. Long gives each supplied point room in its own paragraph or sentence. When the context is sparse, a long draft can still be brief.
+Every claim about what happened or what someone will do must come from the context. Do not infer outcomes, attendance, responsibilities, decisions, deadlines, or commitments. A longer draft can use a warmer greeting, a separate paragraph for each supplied detail, and a courteous closing. It must make exactly the same factual claims as a short draft for the same context. Leave unknown details out or use a placeholder when one is needed.
+Use the requested language or the language of the context. Before returning the draft, compare each sentence of the subject and body to the context. Delete any factual claim the user did not state, including implied claims. Never imply that you sent the message or performed any other action.
 Return just the JSON object.`;
 }
