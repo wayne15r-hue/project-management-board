@@ -61,6 +61,7 @@ type AskOptions = {
   userMessage: string;
   feature: string;
   maxTokens?: number;
+  temperature?: number;
   json?: boolean;
   clientOptions?: CompletionClientOptions;
 };
@@ -68,7 +69,7 @@ type AskOptions = {
 export async function askAI(opts: AskOptions): Promise<string> {
   return completeAI({
     userId: opts.userId, feature: opts.feature, maxTokens: opts.maxTokens,
-    json: opts.json, clientOptions: opts.clientOptions,
+    json: opts.json, temperature: opts.temperature, clientOptions: opts.clientOptions,
     messages: [
       { role: "system", content: opts.systemPrompt },
       { role: "user", content: opts.userMessage },
@@ -80,6 +81,7 @@ export async function completeAI(opts: {
   userId: string;
   feature: string;
   maxTokens?: number;
+  temperature?: number;
   json?: boolean;
   clientOptions?: CompletionClientOptions;
   messages: Groq.Chat.Completions.ChatCompletionMessageParam[];
@@ -102,7 +104,7 @@ export async function completeAI(opts: {
     response = await client.chat.completions.create({
       model: AI_MODEL,
       max_tokens: opts.maxTokens ?? 1024,
-      temperature: 0.7,
+      temperature: opts.temperature ?? 0.7,
       response_format: opts.json ? { type: "json_object" } : undefined,
       messages: opts.messages,
     });
