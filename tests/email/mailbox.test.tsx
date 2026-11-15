@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { EmailMailboxProvider, EmailNavBadge } from "@/components/email/mailbox-state";
+import { EmailMailbox } from "@/components/email/mailbox";
 import { replyRecipients } from "@/lib/email/reply";
 import type { EmailMessage } from "@/lib/email/types";
 
@@ -41,4 +42,27 @@ it("never copies Bcc addresses into a reply all", () => {
   expect(replyRecipients(message, "viewer", true).map(({ id, kind }) => [id, kind]))
     .toEqual([["sender", "to"], ["cc", "cc"]]);
   expect(replyRecipients({ ...message, isBcc: true }, "viewer", true).map(({ id }) => id)).toEqual(["sender"]);
+});
+
+it.each([
+  ["Reply", true], ["Reply all", true], ["Forward", false],
+] as const)("opens %s with the expected drafting controls", async (action, hasAssistant) => {
+  const savedMessage = { ...message, subject: "Project update", sentAt: "2026-11-14T10:00:00Z" };
+  const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(async (url, init) => {
+    const path = String(url);
+    if (path.includes("view=count")) return Response.json(0);
+    if (path.includes("folder=inbox")) return Response.json({ items: [savedMessage], nextOffset: null });
+    if (JSON.parse(String(init?.body)).action === "open") return Response.json(savedMessage);
+    return Response.json({ version: 1 });
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(<EmailMailboxProvider userId="viewer"><EmailMailbox userId="viewer" aiEnabled /></EmailMailboxProvider>);
+  fireEvent.click(await screen.findByRole("button", { name: /Project update/ }));
+  fireEvent.click(await screen.findByRole("button", { name: action }));
+  expect(Boolean(screen.queryByRole("button", { name: "Draft with AI" }))).toBe(hasAssistant);
+  fireEvent.click(screen.getByRole("button", { name: "Close compose" }));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Compose email" })).toBeNull());
+  const save = fetch.mock.calls.map(([, init]) => init?.body && JSON.parse(String(init.body)))
+    .find((body) => body?.action === "save-draft");
+  expect(save).toMatchObject({ version: 0, composeKind: hasAssistant ? "reply" : "forward" });
 });

@@ -1,4 +1,4 @@
-import Groq from "groq-sdk";
+import Groq, { type ClientOptions } from "groq-sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const AI_MODEL =
@@ -25,7 +25,9 @@ export function aiConfigured(): boolean {
   return Boolean(process.env.GROQ_API_KEY) && process.env.AI_ENABLED !== "false";
 }
 
-export function getGroqClient() {
+type CompletionClientOptions = Pick<ClientOptions, "logLevel" | "maxRetries" | "timeout">;
+
+export function getGroqClient(options?: CompletionClientOptions) {
   if (!process.env.GROQ_API_KEY) {
     throw new AIError(
       "AI features are currently unavailable. The server is missing GROQ_API_KEY.",
@@ -33,7 +35,7 @@ export function getGroqClient() {
       503
     );
   }
-  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+  return new Groq({ ...options, apiKey: process.env.GROQ_API_KEY });
 }
 
 async function reserveUsage(userId: string, feature: string): Promise<string> {
@@ -60,12 +62,13 @@ type AskOptions = {
   feature: string;
   maxTokens?: number;
   json?: boolean;
+  clientOptions?: CompletionClientOptions;
 };
 
 export async function askAI(opts: AskOptions): Promise<string> {
   return completeAI({
     userId: opts.userId, feature: opts.feature, maxTokens: opts.maxTokens,
-    json: opts.json,
+    json: opts.json, clientOptions: opts.clientOptions,
     messages: [
       { role: "system", content: opts.systemPrompt },
       { role: "user", content: opts.userMessage },
@@ -78,6 +81,7 @@ export async function completeAI(opts: {
   feature: string;
   maxTokens?: number;
   json?: boolean;
+  clientOptions?: CompletionClientOptions;
   messages: Groq.Chat.Completions.ChatCompletionMessageParam[];
 }): Promise<string> {
   if (!aiConfigured()) {
@@ -91,7 +95,7 @@ export async function completeAI(opts: {
   // before the billed request prevents concurrent calls from exceeding the cap.
   const usageId = await reserveUsage(opts.userId, opts.feature);
 
-  const client = getGroqClient();
+  const client = getGroqClient(opts.clientOptions);
 
   let response;
   try {
