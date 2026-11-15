@@ -15,13 +15,14 @@ create function auth.uid() returns uuid language sql stable as $$select nullif(c
 create function auth.role() returns text language sql stable as $$select current_user::text$$;
 create schema storage;
 create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
-create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text);
+create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, metadata jsonb);
 alter table storage.objects enable row level security;
 create function storage.foldername(text) returns text[] language sql immutable as $$select string_to_array($1,'/')$$;
 
 create role anon nologin;
 create role service_role nologin bypassrls;
 create schema realtime;
+create function realtime.send(jsonb,text,text,boolean) returns void language plpgsql as $$begin return; end$$;
 create table realtime.messages(id uuid primary key default gen_random_uuid(), topic text, extension text);
 alter table realtime.messages enable row level security;
 create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;

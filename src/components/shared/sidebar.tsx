@@ -26,6 +26,7 @@ import {
   Plus,
   LogOut,
   MessageSquare,
+  Mail,
   LayoutGrid,
   ClipboardList,
   Ticket,
@@ -44,10 +45,12 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/shared/theme-provider";
 import { ChatNavBadge } from "@/components/chat/chat-nav-badge";
+import { EmailNavBadge } from "@/components/email/mailbox-state";
 import type { Board } from "@/types";
 
 interface SidebarProps {
   isEmployeeAdmin?: boolean;
+  emailEnabled?: boolean;
   boards: Board[];
   userEmail: string;
   userName: string | null;
@@ -92,7 +95,7 @@ function initials(name: string | null, email: string) {
     .join("");
 }
 
-export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployeeAdmin = false }: SidebarProps) {
+export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployeeAdmin = false, emailEnabled = false }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -145,6 +148,7 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
     { href: "/dashboard/service-desk", label: "Service Desk", icon: Ticket },
     { href: "/dashboard/leave-desk", label: "LeaveDesk", icon: CalendarDays },
     { href: "/dashboard/chat", label: "Chat", icon: MessageSquare, badge: <ChatNavBadge collapsed={collapsed} /> },
+    ...(emailEnabled ? [{ href: "/dashboard/email", label: "Email", icon: Mail, badge: <EmailNavBadge collapsed={collapsed} /> }] : []),
   ];
   const settingsLinks = [
     ...(isEmployeeAdmin ? [{ href: "/dashboard/admin", label: "Admin", icon: ShieldCheck }] : []),
