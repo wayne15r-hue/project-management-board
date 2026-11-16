@@ -1,8 +1,13 @@
 import { aiConfigured } from "@/lib/ai/client";
+import { personalAIEnabled } from "@/lib/personal-ai/server";
 import type { EmailDraftAIInput } from "./ai-draft";
 
 export function emailDraftAIEnabled() {
   return process.env.EMAIL_AI_ENABLED === "true" && aiConfigured();
+}
+
+export function emailPersonalDraftEnabled() {
+  return process.env.EMAIL_AI_ENABLED === "true" && personalAIEnabled();
 }
 
 export function emailDraftSystemPrompt(mode: EmailDraftAIInput["mode"]) {

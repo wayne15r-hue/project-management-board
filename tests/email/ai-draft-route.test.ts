@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/email/ai-draft/route";
+import * as personalAI from "@/lib/personal-ai/server";
 
 const { getUser, mailboxRpc, reserve, complete, configure } = vi.hoisted(() => ({
   getUser: vi.fn(), mailboxRpc: vi.fn(), reserve: vi.fn(), complete: vi.fn(), configure: vi.fn(),
@@ -39,6 +40,31 @@ beforeEach(() => {
   providerResult({ status: "draft", subject: "Thank you", body: "Thanks for covering on Monday." });
 });
 afterEach(() => vi.unstubAllEnvs());
+
+it("drafts through the explicitly selected personal connection and returns its usage", async () => {
+  vi.stubEnv("PERSONAL_AI_ENABLED", "true");
+  vi.stubEnv("PERSONAL_AI_ENCRYPTION_KEY", "a".repeat(64));
+  const receipt = {
+    usage: { inputTokens: 240, outputTokens: 40, totalTokens: 280, reasoningTokens: null },
+    costMicros: 32, reservedMicros: 110,
+  };
+  const personalRun = vi.spyOn(personalAI, "runPersonalAI").mockResolvedValue({
+    text: '{"status":"draft","subject":"Thank you","body":"Thanks for covering on Monday."}', receipt,
+  });
+  try {
+    const selection = { provider: "groq", model: "openai/gpt-oss-20b", effort: "low" };
+    const runId = "10000000-0000-4000-8000-000000000004";
+    const response = await POST(request({ ...requestBody, personal: { selection, runId } }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ subject: "Thank you", body: "Thanks for covering on Monday.", receipt });
+    expect(personalRun).toHaveBeenCalledWith(user, selection, runId, "email_draft",
+      expect.objectContaining({ input: JSON.stringify(requestBody) }));
+    expect(complete).not.toHaveBeenCalled();
+    expect(reserve).not.toHaveBeenCalled();
+  } finally {
+    personalRun.mockRestore();
+  }
+});
 
 it.each([
   ["friendly", "short"], ["friendly", "long"], ["professional", "short"], ["professional", "long"],

@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { RingtoneSettings } from "./ringtone-settings";
+import { ApiConnections } from "@/components/personal-ai/api-connections";
 import { cn } from "@/lib/utils";
 
 interface UsageRow {
@@ -36,6 +37,7 @@ interface SettingsFormProps {
   initialEmailNotifications?: boolean;
   aiConfigured?: boolean;
   aiModel?: string;
+  personalAI?: boolean;
   usage?: UsageRow[];
 }
 
@@ -51,6 +53,7 @@ export function SettingsForm({
   initialEmailNotifications = true,
   aiConfigured = false,
   aiModel = "openai/gpt-oss-120b",
+  personalAI = false,
   usage = [],
 }: SettingsFormProps) {
   const router = useRouter();
@@ -352,6 +355,8 @@ export function SettingsForm({
           )}
         </div>
       </section>
+
+      {personalAI && <ApiConnections key={userId} userId={userId} />}
 
       {/* Notifications */}
       <section>

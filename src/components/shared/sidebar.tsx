@@ -27,6 +27,7 @@ import {
   LogOut,
   MessageSquare,
   Mail,
+  Wrench,
   LayoutGrid,
   ClipboardList,
   Ticket,
@@ -51,6 +52,7 @@ import type { Board } from "@/types";
 interface SidebarProps {
   isEmployeeAdmin?: boolean;
   emailEnabled?: boolean;
+  toolsEnabled?: boolean;
   boards: Board[];
   userEmail: string;
   userName: string | null;
@@ -95,7 +97,7 @@ function initials(name: string | null, email: string) {
     .join("");
 }
 
-export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployeeAdmin = false, emailEnabled = false }: SidebarProps) {
+export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployeeAdmin = false, emailEnabled = false, toolsEnabled = false }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -149,6 +151,7 @@ export function Sidebar({ boards, userEmail, userName, userAvatarUrl, isEmployee
     { href: "/dashboard/leave-desk", label: "LeaveDesk", icon: CalendarDays },
     { href: "/dashboard/chat", label: "Chat", icon: MessageSquare, badge: <ChatNavBadge collapsed={collapsed} /> },
     ...(emailEnabled ? [{ href: "/dashboard/email", label: "Email", icon: Mail, badge: <EmailNavBadge collapsed={collapsed} /> }] : []),
+    ...(toolsEnabled ? [{ href: "/dashboard/tools", label: "Tools", icon: Wrench }] : []),
   ];
   const settingsLinks = [
     ...(isEmployeeAdmin ? [{ href: "/dashboard/admin", label: "Admin", icon: ShieldCheck }] : []),
