@@ -7,6 +7,7 @@ import { AuthSessionBoundary } from "@/components/shared/auth-session-boundary";
 import { CallProvider } from '@/components/calls/call-provider';
 
 import { EmailMailboxProvider } from "@/components/email/mailbox-state";
+import { personalAIEnabled } from "@/lib/personal-ai/server";
 
 export default async function DashboardLayout({
   children,
@@ -52,6 +53,7 @@ export default async function DashboardLayout({
               <Sidebar
                 isEmployeeAdmin={!!adminRole}
                 emailEnabled={emailEnabled === true}
+                toolsEnabled={personalAIEnabled()}
                 boards={boards || []}
                 userEmail={user.email || ""}
                 userName={profile?.full_name || null}

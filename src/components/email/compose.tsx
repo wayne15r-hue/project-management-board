@@ -12,10 +12,11 @@ type ComposeDraft = EmailDraft & { forwardSource?: string };
 const field = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
 const kinds = { to: "To", cc: "Cc", bcc: "Bcc" };
 
-export function EmailCompose({ userId, initial, aiEnabled, onClose, onSaved, onSent }: {
+export function EmailCompose({ userId, initial, aiEnabled, personalAI = false, onClose, onSaved, onSent }: {
   userId: string;
   initial: ComposeDraft;
   aiEnabled: boolean;
+  personalAI?: boolean;
   onClose: () => void;
   onSaved: () => void;
   onSent: () => void;
@@ -243,8 +244,8 @@ export function EmailCompose({ userId, initial, aiEnabled, onClose, onSaved, onS
           <input id={subjectId} className={field} value={draft.subject} maxLength={200}
             onChange={(event) => update({ subject: event.target.value })} />
         </div>
-        {aiEnabled && !hasConflict && (draft.composeKind === "new" || draft.composeKind === "reply") && (
-          <EmailDraftAssistant userId={userId} mode={draft.composeKind} hasSubject={!!draft.subject} hasBody={!!draft.body}
+        {(aiEnabled || personalAI) && !hasConflict && (draft.composeKind === "new" || draft.composeKind === "reply") && (
+          <EmailDraftAssistant userId={userId} mode={draft.composeKind} hasSubject={!!draft.subject} hasBody={!!draft.body} sharedAI={aiEnabled} personalAI={personalAI}
             onApply={({ subject, body }) => {
               update({ body, ...(draft.composeKind === "new" && subject !== undefined ? { subject } : {}) });
               messageField.current?.focus();

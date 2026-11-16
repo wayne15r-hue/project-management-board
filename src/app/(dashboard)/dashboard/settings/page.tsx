@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { personalAIEnabled } from "@/lib/personal-ai/server";
 import { EmployeeDetails } from '@/components/employee/employee-details';
 import type { EmployeeState } from '@/types/employee';
 import type { DirectoryFields } from '@/types/accounts';
@@ -48,6 +49,7 @@ export default async function SettingsPage() {
         initialEmailNotifications={profile?.email_notifications ?? true}
         aiConfigured={Boolean(process.env.GROQ_API_KEY) && process.env.AI_ENABLED !== "false"}
         aiModel={process.env.AI_MODEL || "openai/gpt-oss-120b"}
+        personalAI={personalAIEnabled()}
         usage={usage ?? []}
       />
       <EmployeeDetails state={employeeState as EmployeeState} directory={directory as DirectoryFields|null} directoryUnavailable={!!directoryError}/>

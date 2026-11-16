@@ -22,7 +22,7 @@ const date = (value: string) => new Date(value).toLocaleString(undefined, { date
 
 type ComposeDraft = EmailDraft & { forwardSource?: string };
 
-export function EmailMailbox({ userId, aiEnabled }: { userId: string; aiEnabled: boolean }) {
+export function EmailMailbox({ userId, aiEnabled, personalAI = false }: { userId: string; aiEnabled: boolean; personalAI?: boolean }) {
   const { refresh, revision } = useEmailMailbox();
   const [folder, setFolder] = useState<EmailFolder>("inbox");
   const [search, setSearch] = useState("");
@@ -144,7 +144,7 @@ export function EmailMailbox({ userId, aiEnabled }: { userId: string; aiEnabled:
       {!draft && <Button ref={composeButton} onClick={() => compose()} disabled={busy}><Plus /> Compose</Button>}
     </header>
     {issue && <p role="alert" className="border-b px-4 py-2 text-sm text-destructive">{issue}</p>}
-    {draft ? <EmailCompose userId={userId} key={draft.id} initial={draft} aiEnabled={aiEnabled} onSaved={onSaved} onClose={() => { restoreFocus.current = !message; setDraft(null); onSaved(); }}
+    {draft ? <EmailCompose userId={userId} key={draft.id} initial={draft} aiEnabled={aiEnabled} personalAI={personalAI} onSaved={onSaved} onClose={() => { restoreFocus.current = !message; setDraft(null); onSaved(); }}
       onSent={() => { setDraft(null); switchFolder("sent"); refresh(); }} />
       : <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <nav aria-label="Mail folders" className={cn("flex shrink-0 gap-1 overflow-x-auto border-b p-2 md:w-36 md:flex-col md:border-r md:border-b-0", message && "hidden md:flex")}>
